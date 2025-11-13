@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT & Gemini Markdown Copy",
+  "version": "2.0.0",
+  "description": "Add Markdown copy button to ChatGPT and Gemini responses",
+  "author": "bugparty",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "clipboardWrite"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "markdown-copy@bugparty.dev",
+      "strict_min_version": "109.0"
+    }
+  }
+}

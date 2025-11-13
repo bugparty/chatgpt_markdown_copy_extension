@@ -1,0 +1,21 @@
+# Extension packages
+*.zip
+*.crx
+*.xpi
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (if you add build tools later)
+node_modules/
+package-lock.json

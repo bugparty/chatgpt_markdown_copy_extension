@@ -1,0 +1,21 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#4A90E2"/>
+
+  <!-- Copy/Document icon (simplified) -->
+  <g opacity="0.95">
+    <!-- Main document -->
+    <rect x="35" y="30" width="45" height="60" rx="4" fill="white"/>
+    <rect x="38" y="33" width="39" height="54" rx="2" fill="#E8F4FF"/>
+
+    <!-- Overlapping document -->
+    <rect x="48" y="38" width="45" height="60" rx="4" fill="white"/>
+
+    <!-- M letter for Markdown -->
+    <text x="64" y="75" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#4A90E2">M</text>
+
+    <!-- Lines representing text -->
+    <line x1="52" y1="85" x2="76" y2="85" stroke="#4A90E2" stroke-width="2" opacity="0.5"/>
+    <line x1="52" y1="91" x2="85" y2="91" stroke="#4A90E2" stroke-width="2" opacity="0.5"/>
+  </g>
+</svg>

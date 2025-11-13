@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        button {
+            background-color: #4A90E2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #357ABD;
+        }
+        .preview {
+            margin: 20px 0;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .preview-item {
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+        }
+        .instructions {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Extension Icon Generator</h1>
+        <p>This tool will generate PNG icons from the SVG icon for your browser extension.</p>
+
+        <div class="preview">
+            <div class="preview-item">
+                <h3>16x16</h3>
+                <canvas id="canvas16" width="16" height="16"></canvas>
+            </div>
+            <div class="preview-item">
+                <h3>48x48</h3>
+                <canvas id="canvas48" width="48" height="48"></canvas>
+            </div>
+            <div class="preview-item">
+                <h3>128x128</h3>
+                <canvas id="canvas128" width="128" height="128"></canvas>
+            </div>
+        </div>
+
+        <div>
+            <button onclick="generateIcons()">Generate Icons</button>
+            <button onclick="downloadAll()">Download All</button>
+        </div>
+
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Click "Generate Icons" to create the PNG icons from the SVG</li>
+                <li>Click "Download All" to download all three icon sizes</li>
+                <li>Place the downloaded files in the <code>extension/icons/</code> folder</li>
+                <li>Rename them to: icon16.png, icon48.png, and icon128.png</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const svgContent = `<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="64" cy="64" r="60" fill="#4A90E2"/>
+  <g opacity="0.95">
+    <rect x="35" y="30" width="45" height="60" rx="4" fill="white"/>
+    <rect x="38" y="33" width="39" height="54" rx="2" fill="#E8F4FF"/>
+    <rect x="48" y="38" width="45" height="60" rx="4" fill="white"/>
+    <text x="64" y="75" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#4A90E2">M</text>
+    <line x1="52" y1="85" x2="76" y2="85" stroke="#4A90E2" stroke-width="2" opacity="0.5"/>
+    <line x1="52" y1="91" x2="85" y2="91" stroke="#4A90E2" stroke-width="2" opacity="0.5"/>
+  </g>
+</svg>`;
+
+        let generatedImages = {};
+
+        function generateIcons() {
+            const sizes = [16, 48, 128];
+
+            sizes.forEach(size => {
+                const canvas = document.getElementById(`canvas${size}`);
+                const ctx = canvas.getContext('2d');
+
+                const img = new Image();
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, size, size);
+
+                    // Store the data URL for download
+                    generatedImages[size] = canvas.toDataURL('image/png');
+                };
+
+                // Create a blob from SVG and load it
+                const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                img.src = url;
+            });
+
+            alert('Icons generated! You can now download them.');
+        }
+
+        function downloadImage(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = dataUrl;
+            link.click();
+        }
+
+        function downloadAll() {
+            if (Object.keys(generatedImages).length === 0) {
+                alert('Please generate icons first!');
+                return;
+            }
+
+            Object.keys(generatedImages).forEach(size => {
+                setTimeout(() => {
+                    downloadImage(generatedImages[size], `icon${size}.png`);
+                }, 100 * size); // Stagger downloads
+            });
+        }
+
+        // Auto-generate on page load
+        window.onload = function() {
+            setTimeout(generateIcons, 500);
+        };
+    </script>
+</body>
+</html>
