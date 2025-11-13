@@ -12,6 +12,12 @@
   "permissions": [
     "clipboardWrite"
   ],
+  "host_permissions": [
+    "https://*.ingest.sentry.io/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://*.ingest.sentry.io"
+  },
   "content_scripts": [
     {
       "matches": [
@@ -19,7 +25,7 @@
         "https://chat.openai.com/*",
         "https://gemini.google.com/*"
       ],
-      "js": ["content.js"],
+      "js": ["sentry.min.js", "sentry-config.js", "content.js"],
       "run_at": "document_end"
     }
   ],

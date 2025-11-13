@@ -57,6 +57,48 @@ convert icon.svg -resize 48x48 icon48.png
 convert icon.svg -resize 128x128 icon128.png
 ```
 
+## Error Tracking with Sentry (Optional)
+
+This extension includes built-in Sentry integration for error tracking. This is **optional** and disabled by default.
+
+### Setting Up Sentry
+
+1. **Create a Sentry Account**
+   - Go to [sentry.io](https://sentry.io) and create a free account
+   - Create a new project for browser JavaScript
+
+2. **Get Your DSN**
+   - After creating a project, you'll get a DSN (Data Source Name)
+   - It looks like: `https://abc123def456@o123456.ingest.sentry.io/7890123`
+
+3. **Configure the Extension**
+   - Open `extension/sentry-config.js`
+   - Replace `YOUR_SENTRY_DSN_HERE` with your actual DSN:
+     ```javascript
+     dsn: 'https://abc123def456@o123456.ingest.sentry.io/7890123',
+     ```
+   - Update other settings as needed (environment, release version, etc.)
+
+4. **Privacy Considerations**
+   - The extension filters out clipboard data and sensitive information
+   - Only error messages and stack traces are sent to Sentry
+   - No user identification is collected
+   - See `PRIVACY.md` for full details
+
+### Disabling Sentry
+
+Sentry is automatically disabled if:
+- The DSN is not configured (default state)
+- The DSN is set to `YOUR_SENTRY_DSN_HERE`
+
+To completely remove Sentry:
+1. Remove `sentry.min.js` and `sentry-config.js` from the `extension/` folder
+2. Update `manifest.json` to remove these files from the `js` array:
+   ```json
+   "js": ["content.js"]
+   ```
+3. Remove `host_permissions` and `content_security_policy` from `manifest.json`
+
 ## Publishing to Browser Stores
 
 ### Chrome Web Store

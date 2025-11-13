@@ -1,6 +1,40 @@
 (function() {
     'use strict';
 
+    // Helper function to safely capture Sentry events
+    function captureSentryException(error, context = {}) {
+        if (typeof Sentry !== 'undefined' && Sentry.captureException) {
+            try {
+                Sentry.captureException(error, {
+                    tags: {
+                        platform: currentPlatform || 'unknown',
+                        ...context.tags
+                    },
+                    extra: context.extra || {}
+                });
+            } catch (sentryError) {
+                console.error('[Sentry] Failed to capture exception:', sentryError);
+            }
+        }
+    }
+
+    function captureSentryMessage(message, level = 'info', context = {}) {
+        if (typeof Sentry !== 'undefined' && Sentry.captureMessage) {
+            try {
+                Sentry.captureMessage(message, {
+                    level: level,
+                    tags: {
+                        platform: currentPlatform || 'unknown',
+                        ...context.tags
+                    },
+                    extra: context.extra || {}
+                });
+            } catch (sentryError) {
+                console.error('[Sentry] Failed to capture message:', sentryError);
+            }
+        }
+    }
+
     // Add global variables at the beginning of script
     let observer = null;
     let processingQueue = new Set();
@@ -337,39 +371,63 @@
             }
 
             if (markdownContent) {
-                const markdown = htmlToMarkdown(markdownContent);
-                console.log(markdown);
                 try {
-                    await navigator.clipboard.writeText(markdown);
+                    const markdown = htmlToMarkdown(markdownContent);
+                    console.log(markdown);
 
-                    if (currentPlatform === 'chatgpt') {
-                        const svg = mdButton.querySelector('svg');
-                        const originalSVG = svg.cloneNode(true);
-                        svg.innerHTML = '';
-                        const checkPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                        checkPath.setAttribute('d', 'M7 10l2 2 4-4');
-                        checkPath.setAttribute('stroke', 'currentColor');
-                        checkPath.setAttribute('stroke-width', '2');
-                        checkPath.setAttribute('fill', 'none');
-                        svg.appendChild(checkPath);
+                    try {
+                        await navigator.clipboard.writeText(markdown);
 
-                        setTimeout(() => {
-                            svg.replaceWith(originalSVG);
-                        }, 1000);
-                    } else if (currentPlatform === 'gemini') {
-                        const matIcon = mdButton.querySelector('mat-icon');
-                        const originalText = matIcon.textContent;
-                        matIcon.textContent = 'check';
+                        if (currentPlatform === 'chatgpt') {
+                            const svg = mdButton.querySelector('svg');
+                            const originalSVG = svg.cloneNode(true);
+                            svg.innerHTML = '';
+                            const checkPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                            checkPath.setAttribute('d', 'M7 10l2 2 4-4');
+                            checkPath.setAttribute('stroke', 'currentColor');
+                            checkPath.setAttribute('stroke-width', '2');
+                            checkPath.setAttribute('fill', 'none');
+                            svg.appendChild(checkPath);
 
-                        setTimeout(() => {
-                            matIcon.textContent = originalText;
-                        }, 1000);
+                            setTimeout(() => {
+                                svg.replaceWith(originalSVG);
+                            }, 1000);
+                        } else if (currentPlatform === 'gemini') {
+                            const matIcon = mdButton.querySelector('mat-icon');
+                            const originalText = matIcon.textContent;
+                            matIcon.textContent = 'check';
+
+                            setTimeout(() => {
+                                matIcon.textContent = originalText;
+                            }, 1000);
+                        }
+                    } catch (err) {
+                        console.error('Failed to copy to clipboard:', err);
+                        captureSentryException(err, {
+                            tags: { operation: 'clipboard_write' },
+                            extra: { markdownLength: markdown.length }
+                        });
                     }
                 } catch (err) {
-                    console.error('Failed to copy:', err);
+                    console.error('Failed to convert to markdown:', err);
+                    captureSentryException(err, {
+                        tags: { operation: 'markdown_conversion' },
+                        extra: {
+                            hasContent: !!markdownContent,
+                            contentType: markdownContent?.tagName
+                        }
+                    });
                 }
             } else {
-                console.error("can't find message body")
+                const errorMsg = "Can't find message body";
+                console.error(errorMsg);
+                captureSentryMessage(errorMsg, 'warning', {
+                    tags: { operation: 'find_content' },
+                    extra: {
+                        buttonContainerExists: !!buttonContainer,
+                        platform: currentPlatform
+                    }
+                });
             }
         });
 
@@ -443,58 +501,90 @@
 
     // Modified init function observer configuration
     async function init() {
-        await waitForPageLoad();
-        await waitForMainContent();
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+            await waitForPageLoad();
+            await waitForMainContent();
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
-        processExistingMessages();
+            processExistingMessages();
 
-        // Create observer with more relaxed observation options
-        observer = new MutationObserver((mutations) => {
-            // Check if new copy-button added
-            let hasNewButtons = false;
+            // Create observer with more relaxed observation options
+            observer = new MutationObserver((mutations) => {
+                try {
+                    // Check if new copy-button added
+                    let hasNewButtons = false;
 
-            for (const mutation of mutations) {
-                if (mutation.type === 'childList') {
-                    for (const node of mutation.addedNodes) {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            // ChatGPT: check if new message container added
-                            if (currentPlatform === 'chatgpt' &&
-                                (node.matches?.(config.messageSelector) ||
-                                 node.querySelector?.(config.messageSelector))) {
-                                hasNewButtons = true;
-                                break;
-                            }
-                            // Gemini: check if new copy-button added
-                            if (currentPlatform === 'gemini' &&
-                                (node.matches?.(config.buttonContainerSelector) ||
-                                 node.querySelector?.(config.buttonContainerSelector))) {
-                                hasNewButtons = true;
-                                break;
+                    for (const mutation of mutations) {
+                        if (mutation.type === 'childList') {
+                            for (const node of mutation.addedNodes) {
+                                if (node.nodeType === Node.ELEMENT_NODE) {
+                                    // ChatGPT: check if new message container added
+                                    if (currentPlatform === 'chatgpt' &&
+                                        (node.matches?.(config.messageSelector) ||
+                                         node.querySelector?.(config.messageSelector))) {
+                                        hasNewButtons = true;
+                                        break;
+                                    }
+                                    // Gemini: check if new copy-button added
+                                    if (currentPlatform === 'gemini' &&
+                                        (node.matches?.(config.buttonContainerSelector) ||
+                                         node.querySelector?.(config.buttonContainerSelector))) {
+                                        hasNewButtons = true;
+                                        break;
+                                    }
+                                }
                             }
                         }
+                        if (hasNewButtons) break;
                     }
+
+                    if (hasNewButtons) {
+                        processExistingMessages();
+                    }
+                } catch (error) {
+                    console.error('[MutationObserver] Error:', error);
+                    captureSentryException(error, {
+                        tags: { operation: 'mutation_observer' }
+                    });
                 }
-                if (hasNewButtons) break;
+            });
+
+            const mainContent = document.querySelector('main') ||
+                               document.querySelector('[role="main"]') ||
+                               document.body;
+
+            observer.observe(mainContent, {
+                childList: true,
+                subtree: true
+            });
+
+            console.log(`Markdown Copy initialized for ${currentPlatform}`);
+
+            // Report successful initialization
+            if (typeof Sentry !== 'undefined' && Sentry.addBreadcrumb) {
+                Sentry.addBreadcrumb({
+                    category: 'initialization',
+                    message: 'Extension initialized successfully',
+                    level: 'info',
+                    data: { platform: currentPlatform }
+                });
             }
-
-            if (hasNewButtons) {
-                processExistingMessages();
-            }
-        });
-
-        const mainContent = document.querySelector('main') ||
-                           document.querySelector('[role="main"]') ||
-                           document.body;
-
-        observer.observe(mainContent, {
-            childList: true,
-            subtree: true
-        });
-
-        console.log(`Markdown Copy initialized for ${currentPlatform}`);
+        } catch (error) {
+            console.error('[Init] Failed to initialize extension:', error);
+            captureSentryException(error, {
+                tags: { operation: 'initialization' },
+                extra: { platform: currentPlatform }
+            });
+        }
     }
 
-    // Start script
-    init();
+    // Start script with error handling
+    try {
+        init();
+    } catch (error) {
+        console.error('[Main] Failed to start extension:', error);
+        captureSentryException(error, {
+            tags: { operation: 'startup' }
+        });
+    }
 })();

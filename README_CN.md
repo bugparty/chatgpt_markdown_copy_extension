@@ -57,6 +57,48 @@ convert icon.svg -resize 48x48 icon48.png
 convert icon.svg -resize 128x128 icon128.png
 ```
 
+## 使用 Sentry 进行错误追踪（可选）
+
+此扩展内置了 Sentry 错误追踪集成。这是**可选的**，默认情况下是禁用的。
+
+### 配置 Sentry
+
+1. **创建 Sentry 账户**
+   - 访问 [sentry.io](https://sentry.io) 并创建免费账户
+   - 为浏览器 JavaScript 创建新项目
+
+2. **获取 DSN**
+   - 创建项目后，您将获得 DSN（数据源名称）
+   - 格式类似：`https://abc123def456@o123456.ingest.sentry.io/7890123`
+
+3. **配置扩展**
+   - 打开 `extension/sentry-config.js`
+   - 将 `YOUR_SENTRY_DSN_HERE` 替换为您的实际 DSN：
+     ```javascript
+     dsn: 'https://abc123def456@o123456.ingest.sentry.io/7890123',
+     ```
+   - 根据需要更新其他设置（环境、发布版本等）
+
+4. **隐私考虑**
+   - 扩展会过滤掉剪贴板数据和敏感信息
+   - 仅发送错误消息和堆栈跟踪到 Sentry
+   - 不收集用户身份信息
+   - 查看 `PRIVACY.md` 了解完整详情
+
+### 禁用 Sentry
+
+在以下情况下，Sentry 会自动禁用：
+- DSN 未配置（默认状态）
+- DSN 设置为 `YOUR_SENTRY_DSN_HERE`
+
+完全移除 Sentry：
+1. 从 `extension/` 文件夹中删除 `sentry.min.js` 和 `sentry-config.js`
+2. 更新 `manifest.json`，从 `js` 数组中移除这些文件：
+   ```json
+   "js": ["content.js"]
+   ```
+3. 从 `manifest.json` 中移除 `host_permissions` 和 `content_security_policy`
+
 ## 发布到浏览器商店
 
 ### Chrome 网上应用店
