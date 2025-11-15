@@ -2,6 +2,7 @@
 *.zip
 *.crx
 *.xpi
+build/
 
 # macOS
 .DS_Store
