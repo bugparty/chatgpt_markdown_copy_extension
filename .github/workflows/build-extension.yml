@@ -57,28 +57,29 @@ jobs:
 
       - name: Build Firefox extension
         run: |
-          # Create a temporary directory for Firefox build
+          # Create temporary directories for Firefox build
           mkdir -p build/firefox-temp
+          mkdir -p build/firefox-artifacts
 
           # Copy extension files
           cp -r extension/* build/firefox-temp/
 
           # Build using web-ext (this validates the extension too)
           cd build/firefox-temp
-          web-ext build --overwrite-dest --artifacts-dir ../
+          web-ext build --overwrite-dest --artifacts-dir ../firefox-artifacts/
           cd ../..
 
           # Rename the output file
-          cd build
+          cd build/firefox-artifacts
           # Find the .zip file created by web-ext and rename it
-          FIREFOX_ZIP=$(find . -maxdepth 1 -name "*.zip" -type f)
+          FIREFOX_ZIP=$(find . -maxdepth 1 -name "*.zip" -type f | head -n 1)
           if [ -n "$FIREFOX_ZIP" ]; then
-            mv "$FIREFOX_ZIP" chatgpt-markdown-copy-firefox.zip
+            mv "$FIREFOX_ZIP" ../chatgpt-markdown-copy-firefox.zip
           fi
-          cd ..
+          cd ../..
 
-          # Clean up temp directory
-          rm -rf build/firefox-temp
+          # Clean up temp directories
+          rm -rf build/firefox-temp build/firefox-artifacts
 
           echo "Firefox extension built successfully"
 
