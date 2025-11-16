@@ -36,9 +36,9 @@ A browser extension that adds a Markdown copy button to ChatGPT and Google Gemin
 4. Go to `Safari` > `Settings` > `Extensions`
 5. Click the "+" button and select the `extension` folder
 
-**Note**: For production use on Safari, the extension needs to be converted to a Safari App Extension using Xcode. The built Safari package can be converted using:
+**Note**: For production use on Safari, the extension needs to be converted to a Safari App Extension using Xcode. This is automatically done in the CI/CD pipeline using macOS runners. You can also manually convert the extension using:
 ```bash
-xcrun safari-web-extension-converter /path/to/extension --app-name "ChatGPT Markdown Copy"
+xcrun safari-web-extension-converter extension/ --app-name "ChatGPT Markdown Copy"
 ```
 
 ## Before Publishing: Generate Icons
@@ -169,9 +169,15 @@ Safari extensions require conversion to a Safari App Extension format and submis
    - Apple Developer Account ($99/year)
    - Code signing certificate
 
-2. **Convert to Safari App Extension**
+2. **Get the Safari Extension Package**
+
+   The CI/CD pipeline automatically builds two Safari packages:
+   - `chatgpt-markdown-copy-safari-webextension.zip` - Ready for manual conversion
+   - `chatgpt-markdown-copy-safari-xcode-project.zip` - Pre-converted Xcode project
+
+   Download the Xcode project from the GitHub Actions artifacts or releases, or convert manually:
    ```bash
-   # Convert the web extension to Safari format
+   # Manual conversion (if needed)
    xcrun safari-web-extension-converter extension/ --app-name "ChatGPT Markdown Copy"
    ```
    This creates an Xcode project.

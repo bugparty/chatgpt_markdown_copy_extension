@@ -36,9 +36,9 @@
 4. 进入 `Safari` > `设置` > `扩展`
 5. 点击"+"按钮，选择 `extension` 文件夹
 
-**注意**：要在 Safari 上正式使用，扩展需要使用 Xcode 转换为 Safari App Extension。可以使用以下命令转换构建好的 Safari 包：
+**注意**：要在 Safari 上正式使用，扩展需要使用 Xcode 转换为 Safari App Extension。这在 CI/CD 流程中已使用 macOS runner 自动完成。您也可以手动转换扩展：
 ```bash
-xcrun safari-web-extension-converter /path/to/extension --app-name "ChatGPT Markdown Copy"
+xcrun safari-web-extension-converter extension/ --app-name "ChatGPT Markdown Copy"
 ```
 
 ## 发布前：生成图标
@@ -169,9 +169,15 @@ Safari 扩展需要转换为 Safari App Extension 格式，并通过 Mac App Sto
    - Apple 开发者账户（$99/年）
    - 代码签名证书
 
-2. **转换为 Safari App Extension**
+2. **获取 Safari 扩展包**
+
+   CI/CD 流程会自动构建两个 Safari 包：
+   - `chatgpt-markdown-copy-safari-webextension.zip` - 准备用于手动转换
+   - `chatgpt-markdown-copy-safari-xcode-project.zip` - 预转换的 Xcode 项目
+
+   从 GitHub Actions 构建产物或发布版本中下载 Xcode 项目，或手动转换：
    ```bash
-   # 将 web extension 转换为 Safari 格式
+   # 手动转换（如果需要）
    xcrun safari-web-extension-converter extension/ --app-name "ChatGPT Markdown Copy"
    ```
    这将创建一个 Xcode 项目。
