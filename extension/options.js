@@ -22,7 +22,10 @@
         // Feedback
         feedbackType: document.getElementById('feedback-type'),
         feedbackText: document.getElementById('feedback-text'),
+        contactEmail: document.getElementById('contact-email'),
         includeInfo: document.getElementById('include-info'),
+        feedbackPreview: document.getElementById('feedback-preview'),
+        previewContent: document.getElementById('preview-content'),
         submitFeedback: document.getElementById('submit-feedback'),
         githubLink: document.getElementById('github-link'),
         feedbackStatus: document.getElementById('feedback-status'),
@@ -172,18 +175,22 @@
         });
     }
 
-    // Submit feedback
-    function submitFeedback() {
-        const type = elements.feedbackType.value;
+    // Generate issue body for preview and submission
+    function generateIssueBody() {
         const text = elements.feedbackText.value.trim();
+        const email = elements.contactEmail.value.trim();
 
         if (!text) {
-            showStatus(elements.feedbackStatus, 'Please enter your feedback message.', 'error');
-            return;
+            return null;
         }
 
-        // Prepare issue body
         let issueBody = text;
+
+        // Add contact email if provided
+        if (email) {
+            issueBody += '\n\n---\n**Contact Information:**\n';
+            issueBody += `Email: ${email}\n`;
+        }
 
         // Add system info if requested
         if (elements.includeInfo.checked) {
@@ -200,6 +207,34 @@
             issueBody += `- Platform: ${info.platform}\n`;
         }
 
+        return issueBody;
+    }
+
+    // Update preview
+    function updatePreview() {
+        const issueBody = generateIssueBody();
+
+        if (issueBody && elements.includeInfo.checked) {
+            elements.previewContent.textContent = issueBody;
+            elements.feedbackPreview.style.display = 'block';
+        } else {
+            elements.feedbackPreview.style.display = 'none';
+        }
+    }
+
+    // Submit feedback
+    function submitFeedback() {
+        const type = elements.feedbackType.value;
+        const text = elements.feedbackText.value.trim();
+
+        if (!text) {
+            showStatus(elements.feedbackStatus, 'Please enter your feedback message.', 'error');
+            return;
+        }
+
+        // Generate issue body
+        const issueBody = generateIssueBody();
+
         // Create GitHub issue URL with pre-filled content
         const issueTitle = encodeURIComponent(`[${type.toUpperCase()}] ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
         const issueBodyEncoded = encodeURIComponent(issueBody);
@@ -210,6 +245,8 @@
 
         // Clear form
         elements.feedbackText.value = '';
+        elements.contactEmail.value = '';
+        updatePreview();
         showStatus(elements.feedbackStatus, 'Opening GitHub to submit your feedback...', 'success');
     }
 
@@ -242,7 +279,16 @@
     elements.githubLink.addEventListener('click', openGitHub);
     elements.saveDebug.addEventListener('click', saveDebugOptions);
 
+    // Feedback preview listeners
+    elements.feedbackText.addEventListener('input', updatePreview);
+    elements.contactEmail.addEventListener('input', updatePreview);
+    elements.includeInfo.addEventListener('change', updatePreview);
+    elements.feedbackType.addEventListener('change', updatePreview);
+
     // Load settings on page load
-    document.addEventListener('DOMContentLoaded', loadSettings);
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSettings();
+        updatePreview(); // Show preview on load if checkbox is checked
+    });
 
 })();
