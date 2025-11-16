@@ -134,17 +134,31 @@ jobs:
           echo "Contents:"
           ls -la build/safari-temp/
 
-          # Convert to Safari App Extension
+          echo "Manifest.json content:"
+          cat build/safari-temp/manifest.json
+
+          # Convert to Safari App Extension - capture full output
           echo "Running safari-web-extension-converter..."
+          set -x  # Enable command tracing
+
           xcrun safari-web-extension-converter build/safari-temp \
             --project-location build/safari-project \
             --app-name "ChatGPT Markdown Copy" \
             --bundle-identifier "dev.bugparty.chatgpt-markdown-copy" \
             --swift \
-            --no-open || {
-              echo "Error: safari-web-extension-converter failed"
-              exit 1
-            }
+            --no-open 2>&1 | tee converter-output.log
+
+          CONVERTER_EXIT_CODE=${PIPESTATUS[0]}
+          set +x  # Disable command tracing
+
+          echo "Converter exit code: $CONVERTER_EXIT_CODE"
+          echo "Full converter output:"
+          cat converter-output.log
+
+          if [ $CONVERTER_EXIT_CODE -ne 0 ]; then
+            echo "Error: safari-web-extension-converter failed with exit code $CONVERTER_EXIT_CODE"
+            exit 1
+          fi
 
           echo "Checking if project was created..."
           if [ -d "build/safari-project" ]; then
@@ -152,6 +166,8 @@ jobs:
             ls -la build/safari-project/
           else
             echo "Error: Safari project directory not found"
+            echo "Current directory contents:"
+            ls -la build/
             exit 1
           fi
 
