@@ -28,6 +28,19 @@
 2. 点击"临时载入附加组件"
 3. 导航到 `extension` 文件夹，选择 `manifest.json` 文件
 
+#### Safari
+
+1. 打开 Safari，进入 `Safari` > `设置` > `高级`
+2. 勾选"在菜单栏中显示开发菜单"
+3. 进入 `开发` > `允许未签名的扩展`（用于开发）
+4. 进入 `Safari` > `设置` > `扩展`
+5. 点击"+"按钮，选择 `extension` 文件夹
+
+**注意**：要在 Safari 上正式使用，扩展需要使用 Xcode 转换为 Safari App Extension。可以使用以下命令转换构建好的 Safari 包：
+```bash
+xcrun safari-web-extension-converter /path/to/extension --app-name "ChatGPT Markdown Copy"
+```
+
 ## 发布前：生成图标
 
 扩展需要图标文件。按以下步骤生成：
@@ -147,6 +160,34 @@ convert icon.svg -resize 128x128 icon128.png
 4. **提交审核**
    - Firefox 的审核通常比 Chrome 快
 
+### Safari 扩展库
+
+Safari 扩展需要转换为 Safari App Extension 格式，并通过 Mac App Store 提交。
+
+1. **要求**
+   - 安装了 Xcode 的 macOS 系统
+   - Apple 开发者账户（$99/年）
+   - 代码签名证书
+
+2. **转换为 Safari App Extension**
+   ```bash
+   # 将 web extension 转换为 Safari 格式
+   xcrun safari-web-extension-converter extension/ --app-name "ChatGPT Markdown Copy"
+   ```
+   这将创建一个 Xcode 项目。
+
+3. **在 Xcode 中构建**
+   - 打开生成的 Xcode 项目
+   - 配置签名和功能
+   - 构建并归档应用
+
+4. **提交到 App Store**
+   - 使用 Xcode 上传到 App Store Connect
+   - 填写应用元数据
+   - 提交审核
+
+**注意**：Safari 扩展作为 macOS 应用的一部分分发。转换工具会创建 Safari 扩展和一个最小化的宿主应用。
+
 ### 发布重要说明
 
 - **隐私政策**：两个商店都可能需要隐私政策。由于此扩展仅使用 `clipboardWrite` 权限且不收集任何数据，您可以包含以下简单声明：
@@ -200,6 +241,7 @@ chatgpt_markdown_copy_extension/
 
 - Chrome/Edge/Brave：版本 88+
 - Firefox：版本 109+
+- Safari：版本 14+（需要 macOS Big Sur 或更高版本）
 
 ## 开发
 

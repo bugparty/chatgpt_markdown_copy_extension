@@ -28,6 +28,19 @@ A browser extension that adds a Markdown copy button to ChatGPT and Google Gemin
 2. Click "Load Temporary Add-on"
 3. Navigate to the `extension` folder and select the `manifest.json` file
 
+#### Safari
+
+1. Open Safari and go to `Safari` > `Settings` > `Advanced`
+2. Check "Show Develop menu in menu bar"
+3. Go to `Develop` > `Allow Unsigned Extensions` (for development)
+4. Go to `Safari` > `Settings` > `Extensions`
+5. Click the "+" button and select the `extension` folder
+
+**Note**: For production use on Safari, the extension needs to be converted to a Safari App Extension using Xcode. The built Safari package can be converted using:
+```bash
+xcrun safari-web-extension-converter /path/to/extension --app-name "ChatGPT Markdown Copy"
+```
+
 ## Before Publishing: Generate Icons
 
 The extension requires icon files. Follow these steps to generate them:
@@ -147,6 +160,34 @@ To completely remove Sentry:
 4. **Submit for Review**
    - Firefox reviews are typically faster than Chrome
 
+### Safari Extensions Gallery
+
+Safari extensions require conversion to a Safari App Extension format and submission through the Mac App Store.
+
+1. **Requirements**
+   - macOS with Xcode installed
+   - Apple Developer Account ($99/year)
+   - Code signing certificate
+
+2. **Convert to Safari App Extension**
+   ```bash
+   # Convert the web extension to Safari format
+   xcrun safari-web-extension-converter extension/ --app-name "ChatGPT Markdown Copy"
+   ```
+   This creates an Xcode project.
+
+3. **Build in Xcode**
+   - Open the generated Xcode project
+   - Configure signing & capabilities
+   - Build and archive the app
+
+4. **Submit to App Store**
+   - Use Xcode to upload to App Store Connect
+   - Fill in app metadata
+   - Submit for review
+
+**Note**: Safari extensions are distributed as part of a macOS app. The conversion tool creates both the Safari extension and a minimal host app.
+
 ### Important Notes for Publishing
 
 - **Privacy Policy**: Both stores may require a privacy policy. Since this extension only uses `clipboardWrite` permission and doesn't collect any data, you can include this simple statement:
@@ -199,6 +240,7 @@ chatgpt_markdown_copy_extension/
 
 - Chrome/Edge/Brave: Version 88+
 - Firefox: Version 109+
+- Safari: Version 14+ (requires macOS Big Sur or later)
 
 ## Development
 
