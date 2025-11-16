@@ -145,8 +145,18 @@ jobs:
           # Build the Xcode project (for development/unsigned builds)
           cd build/safari-project
 
+          # Find the .xcodeproj file
+          XCODE_PROJECT=$(find . -maxdepth 1 -name "*.xcodeproj" -type d | head -n 1)
+
+          if [ -z "$XCODE_PROJECT" ]; then
+            echo "Error: No Xcode project found"
+            exit 1
+          fi
+
+          echo "Found Xcode project: $XCODE_PROJECT"
+
           # Build using xcodebuild
-          xcodebuild -project *.xcodeproj \
+          xcodebuild -project "$XCODE_PROJECT" \
             -scheme "ChatGPT Markdown Copy" \
             -configuration Release \
             -derivedDataPath ./DerivedData \
