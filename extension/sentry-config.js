@@ -5,7 +5,7 @@
 const SENTRY_CONFIG = {
     // REQUIRED: Set your Sentry DSN here
     // Example: 'https://examplePublicKey@o0.ingest.sentry.io/0'
-    dsn: 'YOUR_SENTRY_DSN_HERE',
+    dsn: 'https://05cb409834d55523fe1f68bc5e4ea795@o157982.ingest.us.sentry.io/4510368527089664',
 
     // Optional: Environment (production, staging, development)
     environment: 'production',
