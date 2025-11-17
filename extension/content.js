@@ -40,6 +40,65 @@
     let processingQueue = new Set();
     let processTimeout = null;
 
+    // Error tracking system
+    const errorTracker = {
+        consecutiveErrors: 0,
+        errorLog: [],
+        maxErrors: 3,
+        dialogShown: false,
+        sessionKey: `md-copy-error-dialog-${Date.now()}`,
+
+        recordError: function(type, details) {
+            const error = {
+                type,
+                details,
+                timestamp: new Date().toISOString(),
+                platform: currentPlatform,
+                url: window.location.href
+            };
+
+            this.errorLog.push(error);
+            this.consecutiveErrors++;
+
+            console.log(`[Error Tracker] ${type}:`, details);
+            console.log(`[Error Tracker] Consecutive errors: ${this.consecutiveErrors}/${this.maxErrors}`);
+
+            // Keep only last 10 errors
+            if (this.errorLog.length > 10) {
+                this.errorLog.shift();
+            }
+
+            // Check if we should show the error dialog
+            if (this.consecutiveErrors >= this.maxErrors && !this.dialogShown) {
+                this.showErrorDialog();
+            }
+        },
+
+        recordSuccess: function() {
+            this.consecutiveErrors = 0;
+            console.log('[Error Tracker] Operation successful, reset counter');
+        },
+
+        showErrorDialog: function() {
+            // Check if already shown in this session
+            if (sessionStorage.getItem(this.sessionKey)) {
+                console.log('[Error Tracker] Dialog already shown in this session');
+                return;
+            }
+
+            this.dialogShown = true;
+            sessionStorage.setItem(this.sessionKey, 'true');
+            console.log('[Error Tracker] Showing error dialog...');
+
+            // Inject error dialog
+            injectErrorDialog(this.errorLog);
+        },
+
+        getRecentErrors: function() {
+            return this.errorLog.slice(-5); // Last 5 errors
+        }
+    };
+
     // Detect current platform
     function detectPlatform() {
         const hostname = window.location.hostname;
@@ -412,6 +471,9 @@
                     try {
                         await navigator.clipboard.writeText(markdown);
 
+                        // Record success
+                        errorTracker.recordSuccess();
+
                         if (currentPlatform === 'chatgpt') {
                             const svg = mdButton.querySelector('svg');
                             const originalSVG = svg.cloneNode(true);
@@ -437,6 +499,10 @@
                         }
                     } catch (err) {
                         console.error('Failed to copy to clipboard:', err);
+                        errorTracker.recordError('clipboard_failure', {
+                            error: err.message,
+                            markdownLength: markdown.length
+                        });
                         captureSentryException(err, {
                             tags: { operation: 'clipboard_write' },
                             extra: { markdownLength: markdown.length }
@@ -444,6 +510,11 @@
                     }
                 } catch (err) {
                     console.error('Failed to convert to markdown:', err);
+                    errorTracker.recordError('markdown_conversion_failure', {
+                        error: err.message,
+                        hasContent: !!markdownContent,
+                        contentType: markdownContent?.tagName
+                    });
                     captureSentryException(err, {
                         tags: { operation: 'markdown_conversion' },
                         extra: {
@@ -455,6 +526,14 @@
             } else {
                 const errorMsg = "Can't find message body";
                 console.error(errorMsg);
+                errorTracker.recordError('selector_failure', {
+                    error: errorMsg,
+                    buttonContainerExists: !!buttonContainer,
+                    selectors: {
+                        messageSelector: config.messageSelector,
+                        contentSelector: config.contentSelector
+                    }
+                });
                 captureSentryMessage(errorMsg, 'warning', {
                     tags: { operation: 'find_content' },
                     extra: {
@@ -531,6 +610,374 @@
                 resolve();
             }, 5000);
         });
+    }
+
+    // DOM Sanitization - removes sensitive content but keeps structure
+    function sanitizeDOM(element) {
+        if (!element) return null;
+
+        const clone = element.cloneNode(true);
+
+        // Remove scripts and styles
+        clone.querySelectorAll('script, style, link[rel="stylesheet"]').forEach(el => el.remove());
+
+        // Sanitize text content - replace with length info
+        function sanitizeTextNodes(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.textContent.trim();
+                if (text.length > 0) {
+                    // Keep structure info but replace actual text
+                    node.textContent = `[TEXT:${text.length}chars]`;
+                }
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                // Remove sensitive attributes but keep structural ones
+                const attributesToRemove = [];
+                for (let attr of node.attributes) {
+                    // Keep: class, id, data-testid, role, aria-*
+                    // Remove: onclick, onload, style (inline), src, href (partial)
+                    if (attr.name.startsWith('on') || attr.name === 'style') {
+                        attributesToRemove.push(attr.name);
+                    }
+                }
+                attributesToRemove.forEach(attr => node.removeAttribute(attr));
+
+                // Sanitize URLs (keep domain, remove path details)
+                if (node.hasAttribute('src')) {
+                    try {
+                        const url = new URL(node.getAttribute('src'));
+                        node.setAttribute('src', `${url.protocol}//${url.host}/[RESOURCE]`);
+                    } catch (e) {
+                        node.setAttribute('src', '[REMOVED]');
+                    }
+                }
+
+                if (node.hasAttribute('href')) {
+                    try {
+                        const url = new URL(node.getAttribute('href'));
+                        node.setAttribute('href', `${url.protocol}//${url.host}/[PATH]`);
+                    } catch (e) {
+                        node.setAttribute('href', '[REMOVED]');
+                    }
+                }
+
+                // Recurse into children
+                Array.from(node.childNodes).forEach(child => sanitizeTextNodes(child));
+            }
+        }
+
+        sanitizeTextNodes(clone);
+        return clone;
+    }
+
+    // Collect DOM snapshot for error reporting
+    function collectDOMSnapshot() {
+        const snapshot = {
+            platform: currentPlatform,
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            selectors: config,
+            structure: null
+        };
+
+        try {
+            // Get the main content container
+            let container;
+            if (currentPlatform === 'chatgpt') {
+                container = document.querySelector('main') || document.querySelector('[role="main"]');
+            } else if (currentPlatform === 'gemini') {
+                container = document.querySelector('message-content')?.closest('[class*="conversation"]') ||
+                           document.querySelector('main');
+            }
+
+            if (container) {
+                const sanitized = sanitizeDOM(container);
+                // Convert to HTML string and limit size
+                let html = sanitized.outerHTML;
+                if (html.length > 50000) {
+                    html = html.substring(0, 50000) + '\n[TRUNCATED - too large]';
+                }
+                snapshot.structure = html;
+            } else {
+                snapshot.structure = '[ERROR: Could not find main container]';
+            }
+        } catch (err) {
+            snapshot.structure = `[ERROR: ${err.message}]`;
+        }
+
+        return snapshot;
+    }
+
+    // Inject error dialog into page
+    function injectErrorDialog(errorLog) {
+        // Check if dialog already exists
+        if (document.getElementById('md-copy-error-dialog')) {
+            return;
+        }
+
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'md-copy-error-dialog';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        `;
+
+        // Create dialog
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: auto;
+            padding: 24px;
+        `;
+
+        dialog.innerHTML = `
+            <div style="margin-bottom: 20px;">
+                <div style="font-size: 24px; margin-bottom: 8px;">⚠️ 扩展似乎遇到问题</div>
+                <div style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+                    检测到连续 ${errorLog.length} 次操作失败，这可能是因为网站更新了界面，导致选择器失效。
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <div style="font-weight: 600; margin-bottom: 12px; font-size: 16px;">你愿意帮助改进吗？</div>
+                <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                    <label style="display: flex; align-items: start; cursor: pointer; margin-bottom: 12px;">
+                        <input type="checkbox" id="md-include-dom" checked style="margin-right: 8px; margin-top: 4px;">
+                        <span style="font-size: 14px;">发送当前页面的DOM结构（已脱敏，不包含对话内容）</span>
+                    </label>
+                    <label style="display: flex; align-items: start; cursor: pointer;">
+                        <input type="checkbox" id="md-include-errors" checked style="margin-right: 8px; margin-top: 4px;">
+                        <span style="font-size: 14px;">包含错误日志</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+                <button id="md-preview-data" style="
+                    flex: 1;
+                    min-width: 120px;
+                    padding: 10px 16px;
+                    background: #f3f4f6;
+                    border: 1px solid #d1d5db;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    color: #374151;
+                ">查看将发送的数据</button>
+                <button id="md-send-report" style="
+                    flex: 1;
+                    min-width: 120px;
+                    padding: 10px 16px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border: none;
+                    border-radius: 6px;
+                    color: white;
+                    font-size: 14px;
+                    cursor: pointer;
+                    font-weight: 500;
+                ">发送报告</button>
+                <button id="md-close-dialog" style="
+                    flex: 1;
+                    min-width: 120px;
+                    padding: 10px 16px;
+                    background: #f3f4f6;
+                    border: 1px solid #d1d5db;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    color: #374151;
+                ">暂不发送</button>
+            </div>
+
+            <div style="text-align: center; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                <a href="#" id="md-open-settings" style="
+                    color: #667eea;
+                    text-decoration: none;
+                    font-size: 14px;
+                    font-weight: 500;
+                ">或者打开设置页面手动调整选择器 →</a>
+            </div>
+        `;
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        // Event listeners
+        document.getElementById('md-close-dialog').addEventListener('click', () => {
+            overlay.remove();
+        });
+
+        document.getElementById('md-open-settings').addEventListener('click', (e) => {
+            e.preventDefault();
+            // Open options page directly
+            if (chrome.runtime?.openOptionsPage) {
+                chrome.runtime.openOptionsPage();
+            } else {
+                // Fallback for browsers that don't support openOptionsPage
+                window.open(chrome.runtime.getURL('options.html'), '_blank');
+            }
+            overlay.remove();
+        });
+
+        document.getElementById('md-preview-data').addEventListener('click', () => {
+            showPreviewDialog(errorLog);
+        });
+
+        document.getElementById('md-send-report').addEventListener('click', () => {
+            sendErrorReport(errorLog);
+            overlay.remove();
+        });
+
+        // Close on overlay click
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+    }
+
+    // Show preview of data to be sent
+    function showPreviewDialog(errorLog) {
+        const includeDom = document.getElementById('md-include-dom')?.checked;
+        const includeErrors = document.getElementById('md-include-errors')?.checked;
+
+        const reportData = generateErrorReport(errorLog, includeDom, includeErrors);
+
+        const previewOverlay = document.createElement('div');
+        previewOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        `;
+
+        const previewDialog = document.createElement('div');
+        previewDialog.style.cssText = `
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        `;
+
+        previewDialog.innerHTML = `
+            <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
+                <div style="font-size: 20px; font-weight: 600; margin-bottom: 8px;">数据预览</div>
+                <div style="color: #6b7280; font-size: 14px;">这是将要发送到 GitHub Issues 的数据：</div>
+            </div>
+            <div style="flex: 1; overflow: auto; padding: 24px;">
+                <pre style="
+                    background: #f3f4f6;
+                    padding: 16px;
+                    border-radius: 8px;
+                    font-family: 'Monaco', 'Menlo', monospace;
+                    font-size: 12px;
+                    line-height: 1.6;
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                    margin: 0;
+                ">${reportData.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+            </div>
+            <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; text-align: right;">
+                <button id="md-close-preview" style="
+                    padding: 10px 20px;
+                    background: #f3f4f6;
+                    border: 1px solid #d1d5db;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    color: #374151;
+                ">关闭</button>
+            </div>
+        `;
+
+        previewOverlay.appendChild(previewDialog);
+        document.body.appendChild(previewOverlay);
+
+        document.getElementById('md-close-preview').addEventListener('click', () => {
+            previewOverlay.remove();
+        });
+
+        previewOverlay.addEventListener('click', (e) => {
+            if (e.target === previewOverlay) {
+                previewOverlay.remove();
+            }
+        });
+    }
+
+    // Generate error report content
+    function generateErrorReport(errorLog, includeDom, includeErrors) {
+        let report = `## 自动错误报告\n\n`;
+        report += `**平台:** ${currentPlatform}\n`;
+        report += `**URL:** ${window.location.href}\n`;
+        report += `**时间:** ${new Date().toISOString()}\n`;
+        report += `**扩展版本:** ${chrome.runtime.getManifest().version}\n`;
+        report += `**浏览器:** ${navigator.userAgent}\n\n`;
+
+        if (includeErrors && errorLog.length > 0) {
+            report += `## 错误日志\n\n`;
+            errorLog.forEach((error, index) => {
+                report += `### 错误 ${index + 1}: ${error.type}\n`;
+                report += `- **时间:** ${error.timestamp}\n`;
+                report += `- **详情:** ${JSON.stringify(error.details, null, 2)}\n\n`;
+            });
+        }
+
+        if (includeDom) {
+            report += `## DOM 结构快照 (已脱敏)\n\n`;
+            const snapshot = collectDOMSnapshot();
+            report += `**当前选择器配置:**\n`;
+            report += `\`\`\`json\n${JSON.stringify(snapshot.selectors, null, 2)}\n\`\`\`\n\n`;
+            report += `**页面结构:**\n`;
+            report += `\`\`\`html\n${snapshot.structure}\n\`\`\`\n`;
+        }
+
+        return report;
+    }
+
+    // Send error report to GitHub
+    function sendErrorReport(errorLog) {
+        const includeDom = document.getElementById('md-include-dom')?.checked || false;
+        const includeErrors = document.getElementById('md-include-errors')?.checked || false;
+
+        const reportData = generateErrorReport(errorLog, includeDom, includeErrors);
+
+        // Get first error type for title
+        const firstErrorType = errorLog[0]?.type || 'unknown_error';
+        const title = encodeURIComponent(`[AUTO-REPORT] ${firstErrorType} on ${currentPlatform}`);
+        const body = encodeURIComponent(reportData);
+
+        const githubUrl = `https://github.com/bugparty/chatgpt_markdown_copy_extension/issues/new?title=${title}&body=${body}&labels=auto-report,bug`;
+
+        window.open(githubUrl, '_blank');
     }
 
     // Modified init function observer configuration
