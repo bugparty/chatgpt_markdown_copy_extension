@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT & Gemini Markdown Copy - Settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ChatGPT & Gemini Markdown Copy</h1>
+            <p class="version">Version 2.0.0</p>
+        </header>
+
+        <main>
+            <!-- Feedback Section -->
+            <section class="section">
+                <h2>📝 Feedback</h2>
+                <p class="description">
+                    Found a bug or have a feature request? Let us know!
+                </p>
+                <div class="form-group">
+                    <label for="feedback-type">Type:</label>
+                    <select id="feedback-type">
+                        <option value="bug">Bug Report</option>
+                        <option value="feature">Feature Request</option>
+                        <option value="selector">Selector Not Working</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="feedback-text">Message:</label>
+                    <textarea
+                        id="feedback-text"
+                        rows="6"
+                        placeholder="Describe the issue or suggestion..."
+                    ></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="contact-email">Contact Email (Optional):</label>
+                    <input
+                        type="email"
+                        id="contact-email"
+                        placeholder="your@email.com (so I can follow up with you)"
+                    >
+                    <span class="help-text">Provide your email if you want a response. Not stored anywhere.</span>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="include-info" checked>
+                        Include system info (extension version, browser, URL)
+                    </label>
+                </div>
+                <div id="feedback-preview" class="feedback-preview" style="display: none;">
+                    <h4>Preview of what will be submitted:</h4>
+                    <pre id="preview-content"></pre>
+                </div>
+                <button id="submit-feedback" class="btn btn-primary">Submit Feedback</button>
+                <button id="github-link" class="btn btn-secondary">Open GitHub Issues</button>
+                <div id="feedback-status" class="status-message"></div>
+            </section>
+
+            <!-- Advanced Settings Section -->
+            <section class="section">
+                <h2>⚙️ Advanced Settings</h2>
+                <p class="description">
+                    Customize CSS selectors if the extension stops working after a website update.
+                    <strong>Warning:</strong> Only modify these if you know what you're doing!
+                </p>
+
+                <!-- ChatGPT Selectors -->
+                <div class="platform-config">
+                    <h3>ChatGPT Selectors</h3>
+                    <div class="form-group">
+                        <label for="chatgpt-message">Message Container:</label>
+                        <input
+                            type="text"
+                            id="chatgpt-message"
+                            class="selector-input"
+                            placeholder='[data-testid^="conversation-turn"]'
+                        >
+                        <span class="help-text">Selector for each message turn</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="chatgpt-button-container">Button Container:</label>
+                        <input
+                            type="text"
+                            id="chatgpt-button-container"
+                            class="selector-input"
+                            placeholder=".flex.flex-wrap.items-center"
+                        >
+                        <span class="help-text">Container where copy button lives</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="chatgpt-copy-button">Copy Button:</label>
+                        <input
+                            type="text"
+                            id="chatgpt-copy-button"
+                            class="selector-input"
+                            placeholder='[aria-label="Copy"]'
+                        >
+                        <span class="help-text">Native copy button selector</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="chatgpt-content">Content:</label>
+                        <input
+                            type="text"
+                            id="chatgpt-content"
+                            class="selector-input"
+                            placeholder=".markdown.prose"
+                        >
+                        <span class="help-text">Markdown content container</span>
+                    </div>
+                </div>
+
+                <!-- Gemini Selectors -->
+                <div class="platform-config">
+                    <h3>Gemini Selectors</h3>
+                    <div class="form-group">
+                        <label for="gemini-message">Message Container:</label>
+                        <input
+                            type="text"
+                            id="gemini-message"
+                            class="selector-input"
+                            placeholder="message-content"
+                        >
+                        <span class="help-text">Selector for each message</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="gemini-button-container">Button Container:</label>
+                        <input
+                            type="text"
+                            id="gemini-button-container"
+                            class="selector-input"
+                            placeholder="copy-button"
+                        >
+                        <span class="help-text">Container where copy button lives</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="gemini-copy-button">Copy Button:</label>
+                        <input
+                            type="text"
+                            id="gemini-copy-button"
+                            class="selector-input"
+                            placeholder='button[aria-label="Copy"]'
+                        >
+                        <span class="help-text">Native copy button selector</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="gemini-content">Content:</label>
+                        <input
+                            type="text"
+                            id="gemini-content"
+                            class="selector-input"
+                            placeholder=".markdown"
+                        >
+                        <span class="help-text">Markdown content container</span>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="save-selectors" class="btn btn-primary">Save Settings</button>
+                    <button id="reset-selectors" class="btn btn-secondary">Reset to Default</button>
+                    <button id="test-selectors" class="btn btn-secondary">Test Selectors</button>
+                </div>
+                <div id="selector-status" class="status-message"></div>
+            </section>
+
+            <!-- Debug Section -->
+            <section class="section">
+                <h2>🐛 Debug Options</h2>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="enable-sentry">
+                        Enable error reporting (Sentry)
+                    </label>
+                    <span class="help-text">Help improve the extension by sending anonymous error reports</span>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="enable-dom-snapshot">
+                        Enable DOM snapshots on errors (for bug reports)
+                    </label>
+                    <span class="help-text">Includes sanitized page structure when reporting errors</span>
+                </div>
+                <button id="save-debug" class="btn btn-primary">Save Debug Settings</button>
+                <div id="debug-status" class="status-message"></div>
+            </section>
+        </main>
+
+        <footer>
+            <p>
+                <a href="https://github.com/bugparty/chatgpt_markdown_copy_extension" target="_blank">GitHub</a> |
+                <a href="https://github.com/bugparty/chatgpt_markdown_copy_extension/blob/main/PRIVACY.md" target="_blank">Privacy Policy</a> |
+                <a href="https://github.com/bugparty/chatgpt_markdown_copy_extension/blob/main/LICENSE" target="_blank">License</a>
+            </p>
+        </footer>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

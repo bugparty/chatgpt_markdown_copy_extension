@@ -51,8 +51,8 @@
         return null;
     }
 
-    // Platform configuration
-    const platformConfig = {
+    // Default platform configuration
+    const DEFAULT_PLATFORM_CONFIG = {
         chatgpt: {
             messageSelector: '[data-testid^="conversation-turn"]',
             buttonContainerSelector: '.flex.flex-wrap.items-center',
@@ -75,7 +75,41 @@
         return;
     }
     console.log("current platform", currentPlatform);
-    const config = platformConfig[currentPlatform];
+
+    // Global config variable (will be loaded from storage)
+    let config = null;
+
+    // Load custom selectors from storage
+    function loadCustomSelectors(callback) {
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.sync.get(['customSelectors', 'debugOptions'], (result) => {
+                const customSelectors = result.customSelectors || {};
+                const debugOptions = result.debugOptions || {};
+
+                // Merge custom selectors with defaults
+                const platformSelectors = customSelectors[currentPlatform] || {};
+                const defaultSelectors = DEFAULT_PLATFORM_CONFIG[currentPlatform];
+
+                config = {
+                    messageSelector: platformSelectors.messageSelector || defaultSelectors.messageSelector,
+                    buttonContainerSelector: platformSelectors.buttonContainerSelector || defaultSelectors.buttonContainerSelector,
+                    copyButtonSelector: platformSelectors.copyButtonSelector || defaultSelectors.copyButtonSelector,
+                    contentSelector: platformSelectors.contentSelector || defaultSelectors.contentSelector,
+                    getButtonContainer: defaultSelectors.getButtonContainer
+                };
+
+                console.log('[Markdown Copy] Loaded config:', config);
+                console.log('[Markdown Copy] Debug options:', debugOptions);
+
+                if (callback) callback();
+            });
+        } else {
+            // Fallback if chrome.storage is not available
+            config = DEFAULT_PLATFORM_CONFIG[currentPlatform];
+            console.log('[Markdown Copy] Using default config (storage not available)');
+            if (callback) callback();
+        }
+    }
 
     // HTML to Markdown function
     function htmlToMarkdown(element) {
@@ -580,7 +614,10 @@
 
     // Start script with error handling
     try {
-        init();
+        // Load custom selectors first, then initialize
+        loadCustomSelectors(() => {
+            init();
+        });
     } catch (error) {
         console.error('[Main] Failed to start extension:', error);
         captureSentryException(error, {
