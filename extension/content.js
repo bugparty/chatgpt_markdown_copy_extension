@@ -288,21 +288,29 @@
 
         // Check if processing or already processed
         if (processingQueue.has(containerId)) {
+            console.log('[addMarkdownCopyButton] Skipping - already in processing queue:', containerId);
             return;
         }
 
         // Check if button already added
         if (buttonContainer.querySelector('[data-markdown-copy="true"]')) {
+            console.log('[addMarkdownCopyButton] Skipping - markdown button already exists');
             return;
         }
 
         // For Gemini, additionally check if next sibling is our button
         if (currentPlatform === 'gemini' && buttonContainer.nextElementSibling?.hasAttribute('data-markdown-copy')) {
+            console.log('[addMarkdownCopyButton] Skipping - Gemini button already exists');
             return;
         }
 
         const copyButton = buttonContainer.querySelector(config.copyButtonSelector);
-        if (!copyButton) return;
+        if (!copyButton) {
+            console.log('[addMarkdownCopyButton] Copy button not found, selector:', config.copyButtonSelector);
+            return;
+        }
+
+        console.log('[addMarkdownCopyButton] Adding markdown copy button to container:', containerId);
 
         // Mark as processing
         processingQueue.add(containerId);
@@ -486,17 +494,39 @@
         }
 
         processTimeout = setTimeout(() => {
+            console.log('[processExistingMessages] Starting to process messages...');
+
             if (currentPlatform === 'chatgpt') {
+                // Try multiple selector strategies for better coverage
                 const containers = document.querySelectorAll(`${config.messageSelector} ${config.buttonContainerSelector}`);
-                containers.forEach(container => {
-                    addMarkdownCopyButton(container);
-                });
+                console.log(`[processExistingMessages] Found ${containers.length} button containers using primary selector`);
+
+                // If no containers found, try finding copy buttons directly
+                if (containers.length === 0) {
+                    const copyButtons = document.querySelectorAll(config.copyButtonSelector);
+                    console.log(`[processExistingMessages] Fallback: Found ${copyButtons.length} copy buttons`);
+
+                    copyButtons.forEach(copyButton => {
+                        const container = config.getButtonContainer(copyButton);
+                        if (container && container.closest(config.messageSelector)) {
+                            console.log('[processExistingMessages] Adding button to container found via copy button');
+                            addMarkdownCopyButton(container);
+                        }
+                    });
+                } else {
+                    containers.forEach(container => {
+                        addMarkdownCopyButton(container);
+                    });
+                }
             } else if (currentPlatform === 'gemini') {
                 const copyButtons = document.querySelectorAll(config.buttonContainerSelector);
+                console.log(`[processExistingMessages] Found ${copyButtons.length} Gemini copy buttons`);
                 copyButtons.forEach(button => {
                     addMarkdownCopyButton(button);
                 });
             }
+
+            console.log('[processExistingMessages] Processing complete');
             processTimeout = null;
         }, 300); // 300ms debounce delay
     }
@@ -552,17 +582,53 @@
                         if (mutation.type === 'childList') {
                             for (const node of mutation.addedNodes) {
                                 if (node.nodeType === Node.ELEMENT_NODE) {
-                                    // ChatGPT: check if new message container added
-                                    if (currentPlatform === 'chatgpt' &&
-                                        (node.matches?.(config.messageSelector) ||
-                                         node.querySelector?.(config.messageSelector))) {
-                                        hasNewButtons = true;
-                                        break;
+                                    // ChatGPT: check if new message container or copy button added
+                                    if (currentPlatform === 'chatgpt') {
+                                        // Check for message container
+                                        if (node.matches?.(config.messageSelector) ||
+                                            node.querySelector?.(config.messageSelector)) {
+                                            console.log('[MutationObserver] Detected new message container');
+                                            hasNewButtons = true;
+                                            break;
+                                        }
+                                        // Also check for copy button directly (handles incremental rendering)
+                                        if (node.matches?.(config.copyButtonSelector) ||
+                                            node.querySelector?.(config.copyButtonSelector)) {
+                                            console.log('[MutationObserver] Detected new copy button');
+                                            hasNewButtons = true;
+                                            break;
+                                        }
+                                        // Check for button container
+                                        if (node.matches?.(config.buttonContainerSelector) ||
+                                            node.querySelector?.(config.buttonContainerSelector)) {
+                                            // Verify it's within a message container
+                                            if (node.closest?.(config.messageSelector)) {
+                                                console.log('[MutationObserver] Detected new button container in message');
+                                                hasNewButtons = true;
+                                                break;
+                                            }
+                                        }
                                     }
                                     // Gemini: check if new copy-button added
                                     if (currentPlatform === 'gemini' &&
                                         (node.matches?.(config.buttonContainerSelector) ||
                                          node.querySelector?.(config.buttonContainerSelector))) {
+                                        console.log('[MutationObserver] Detected new Gemini copy button');
+                                        hasNewButtons = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        // Also handle attribute changes that might indicate new content
+                        if (mutation.type === 'attributes') {
+                            const target = mutation.target;
+                            if (target.nodeType === Node.ELEMENT_NODE) {
+                                if (currentPlatform === 'chatgpt') {
+                                    // Check if the attribute change is on a message container
+                                    if (target.matches?.(config.messageSelector) ||
+                                        target.querySelector?.(config.messageSelector)) {
+                                        console.log('[MutationObserver] Detected attribute change on message container');
                                         hasNewButtons = true;
                                         break;
                                     }
@@ -589,7 +655,9 @@
 
             observer.observe(mainContent, {
                 childList: true,
-                subtree: true
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['data-testid', 'class', 'aria-label', 'hidden', 'style']
             });
 
             console.log(`Markdown Copy initialized for ${currentPlatform}`);
