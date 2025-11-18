@@ -1,0 +1,25 @@
+{
+  "name": "chatgpt-markdown-copy-extension",
+  "version": "2.0.0",
+  "description": "Browser extension to copy ChatGPT and Gemini messages as Markdown",
+  "private": true,
+  "scripts": {
+    "lint": "eslint extension/**/*.js",
+    "lint:fix": "eslint extension/**/*.js --fix",
+    "lint:web-ext": "web-ext lint --source-dir=extension"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "eslint-plugin-mozilla": "^3.6.3",
+    "web-ext": "^7.11.0"
+  },
+  "keywords": [
+    "chatgpt",
+    "gemini",
+    "markdown",
+    "chrome-extension",
+    "firefox-addon"
+  ],
+  "author": "",
+  "license": "MIT"
+}

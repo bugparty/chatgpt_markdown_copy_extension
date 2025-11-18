@@ -15,8 +15,31 @@ permissions:
   pull-requests: read
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run web-ext lint
+        run: npm run lint:web-ext
+
   build:
     runs-on: ubuntu-latest
+    needs: lint
 
     steps:
       - name: Checkout code

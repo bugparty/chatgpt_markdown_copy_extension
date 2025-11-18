@@ -1,0 +1,9 @@
+# Third-party libraries
+extension/sentry.min.js
+
+# Build artifacts
+build/
+node_modules/
+
+# Temporary files
+*.tmp
