@@ -17,6 +17,5 @@ Thumbs.db
 *.swo
 *~
 
-# Node (if you add build tools later)
+# Node
 node_modules/
-package-lock.json
