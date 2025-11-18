@@ -43,7 +43,7 @@ if (typeof Sentry !== 'undefined' && SENTRY_CONFIG.dsn && SENTRY_CONFIG.dsn !== 
             ],
 
             // Filter out sensitive information
-            beforeSend(event, hint) {
+            beforeSend(event, _hint) {
                 // Don't send events if user hasn't configured DSN
                 if (!SENTRY_CONFIG.dsn || SENTRY_CONFIG.dsn === 'YOUR_SENTRY_DSN_HERE') {
                     return null;

@@ -166,7 +166,7 @@
         chrome.tabs.create({ url }, (tab) => {
             // Send message to content script to test selectors
             setTimeout(() => {
-                chrome.tabs.sendMessage(tab.id, { action: 'testSelectors' }, (response) => {
+                chrome.tabs.sendMessage(tab.id, { action: 'testSelectors' }, (_response) => {
                     if (chrome.runtime.lastError) {
                         console.log('Tab not ready yet or content script not loaded');
                     }

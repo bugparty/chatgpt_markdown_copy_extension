@@ -37,7 +37,7 @@
 
     // Add global variables at the beginning of script
     let observer = null;
-    let processingQueue = new Set();
+    const processingQueue = new Set();
     let processTimeout = null;
 
     // Detect current platform
@@ -74,7 +74,7 @@
         console.log('Unsupported platform');
         return;
     }
-    console.log("current platform", currentPlatform);
+    console.log('current platform', currentPlatform);
 
     // Global config variable (will be loaded from storage)
     let config = null;
@@ -127,7 +127,7 @@
 
             switch(tag) {
                 // Handle code-block at the beginning
-                case 'code-block':
+                case 'code-block': {
                     // Extract language name
                     const langSpan = node.querySelector('.code-block-decoration span');
                     const language = langSpan ? langSpan.textContent.trim().toLowerCase() : '';
@@ -139,6 +139,7 @@
                         result = '```' + language + '\n' + code + '\n```\n\n';
                     }
                     break;
+                }
                 case 'h1':
                     result = '# ' + node.textContent + '\n\n';
                     break;
@@ -175,7 +176,7 @@
                     }
                     result = '`' + node.textContent + '`';
                     break;
-                case 'pre':
+                case 'pre': {
                     // Skip if pre is inside code-block (Gemini already processed)
                     if (node.closest('code-block')) {
                         return '';
@@ -190,7 +191,7 @@
                         if (langElement) {
                             const langText = langElement.textContent.trim();
                             // Ensure text looks like a language name (short and only alphanumeric)
-                            if (langText.length < 20 && /^[a-zA-Z0-9+#\-]+$/.test(langText)) {
+                            if (langText.length < 20 && /^[a-zA-Z0-9+#-]+$/.test(langText)) {
                                 language = langText.toLowerCase();
                             }
                         }
@@ -202,6 +203,7 @@
                     }
 
                     break;
+                }
                 case 'a':
                     result = '[' + node.textContent + '](' + node.href + ')';
                     break;
@@ -396,7 +398,7 @@
 
         // Add click event
         mdButton.addEventListener('click', async () => {
-            console.log("on click")
+            console.log('on click');
             let markdownContent;
 
             if (currentPlatform === 'chatgpt') {
