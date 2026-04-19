@@ -22,19 +22,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.0
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Run ESLint
         run: npm run lint
@@ -50,20 +45,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.0
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
 
       - name: Install dependencies
         run: |
-          pnpm install --frozen-lockfile
+          npm install -g web-ext
           sudo apt-get update
           sudo apt-get install -y jq
 
@@ -76,8 +65,6 @@ jobs:
           cp -r extension/* build/chrome-temp/
           cd build/chrome-temp
           jq 'del(.browser_specific_settings)' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
-          cd ../..
-          cd build/chrome-temp
           zip -r ../chatgpt-markdown-copy-chrome.zip .
           cd ../..
           rm -rf build/chrome-temp
@@ -88,7 +75,8 @@ jobs:
           mkdir -p build/firefox-temp
           mkdir -p build/firefox-artifacts
           cp -r extension/* build/firefox-temp/
-          npx web-ext build --source-dir build/firefox-temp --overwrite-dest --artifacts-dir build/firefox-artifacts/
+          # Fix: Use full path or ensuring web-ext is in PATH
+          web-ext build --source-dir build/firefox-temp --overwrite-dest --artifacts-dir build/firefox-artifacts/
           FIREFOX_ZIP=$(find build/firefox-artifacts -maxdepth 1 -name "*.zip" -type f | head -n 1)
           if [ -n "$FIREFOX_ZIP" ]; then
             mv "$FIREFOX_ZIP" build/chatgpt-markdown-copy-firefox.zip
@@ -138,17 +126,12 @@ jobs:
           fi
           cd ../..
           echo "Extension files prepared in build/safari-temp"
-          echo "Running safari-web-extension-converter..."
           xcrun safari-web-extension-converter build/safari-temp \
             --project-location build/safari-project \
             --app-name "ChatGPT Markdown Copy" \
             --bundle-identifier "dev.bugparty.chatgpt-markdown-copy" \
             --swift \
             --no-open 2>&1 | tee converter-output.log
-          if [ ! -d "build/safari-project" ]; then
-            echo "Error: Safari project directory not found"
-            # Avoiding exit command
-          fi
           echo "Safari extension converted successfully"
 
       - name: Verify Safari Xcode Project
@@ -170,6 +153,11 @@ jobs:
           zip -r chatgpt-markdown-copy-safari-xcode-project.zip safari-project
           cd ..
           echo "Safari packages created successfully"
+
+      - name: List build artifacts
+        run: |
+          echo "Build artifacts:"
+          ls -lh build/
 
       - name: Upload Safari Web Extension
         uses: actions/upload-artifact@v4
