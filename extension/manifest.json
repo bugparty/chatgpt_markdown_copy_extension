@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "default_locale": "en",
   "name": "__MSG_appName__",
-  "version": "2.1.0",
+  "version": "2.0.5",
   "description": "__MSG_appDescription__",
   "author": "bugparty",
   "icons": {
@@ -35,7 +35,7 @@
         "https://chat.openai.com/*",
         "https://gemini.google.com/*"
       ],
-      "js": ["selectors.js", "markdown.js", "content.js"],
+      "js": ["content.js"],
       "run_at": "document_start"
     }
   ],

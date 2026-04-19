@@ -1,7 +1,20 @@
 // ES Module - Options Page
-const DEFAULT_SELECTORS = globalThis.DEFAULT_PLATFORM_SELECTORS;
 
-// Default selectors are loaded from selectors.js
+// Default selectors (same as in content.js)
+const DEFAULT_SELECTORS = {
+    chatgpt: {
+        messageSelector: '[data-testid^="conversation-turn"]',
+        buttonContainerSelector: '.flex.flex-wrap.items-center',
+        copyButtonSelector: '[aria-label="Copy"]',
+        contentSelector: '.markdown.prose'
+    },
+    gemini: {
+        messageSelector: 'message-content',
+        buttonContainerSelector: 'copy-button',
+        copyButtonSelector: 'button[aria-label="Copy"]',
+        contentSelector: '.markdown'
+    }
+};
 
 // DOM elements
 const elements = {

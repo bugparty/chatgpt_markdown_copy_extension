@@ -1,5 +1,4 @@
 // Content Script
-// Content Script
 
 // Add global variables at the beginning of script
 let observer = null;
@@ -7,7 +6,6 @@ const processingQueue = new Set();
 let processTimeout = null;
 // Global config variable (will be loaded from storage)
 let config = null;
-const DEFAULT_PLATFORM_SELECTORS = globalThis.DEFAULT_PLATFORM_SELECTORS;
 
 // Logging helpers
 function logInfo(...args) {
@@ -35,25 +33,21 @@ function detectPlatform() {
 // Default platform configuration
 const DEFAULT_PLATFORM_CONFIG = {
     chatgpt: {
-        ...DEFAULT_PLATFORM_SELECTORS.chatgpt,
+        messageSelector: '[data-testid^="conversation-turn"]',
+        buttonContainerSelector: '.flex.flex-wrap.items-center',
+        copyButtonSelector: '[aria-label="Copy"], [aria-label="复制"], [aria-label="複製"], [aria-label="Copiar"], [aria-label="Copier"], [aria-label="Kopieren"], [aria-label="Copia"], [aria-label="Копировать"], [aria-label="コピー"], [aria-label="복사"]',
+        fallbackCopyButtonSelector: '#thread article > div > div > div:last-child > div > button:first-child',
+        contentSelector: '.markdown.prose',
         getButtonContainer: (copyButton) => copyButton.parentNode
     },
     gemini: {
-        ...DEFAULT_PLATFORM_SELECTORS.gemini,
+        messageSelector: 'message-content',
+        buttonContainerSelector: 'copy-button',
+        copyButtonSelector: 'button[data-test-id="copy-button"]',
+        contentSelector: '.markdown',
         getButtonContainer: (copyButton) => copyButton.closest('copy-button')
     }
 };
-
-function mergeSelectors(...selectorGroups) {
-    const selectors = selectorGroups
-        .filter(Boolean)
-        .flatMap(group => group.split(','))
-        .map(selector => selector.trim())
-        .filter(Boolean);
-
-    return [...new Set(selectors)].join(', ');
-}
-
 // Load custom selectors from storage
 function loadCustomSelectors(callback) {
     if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -67,9 +61,7 @@ function loadCustomSelectors(callback) {
             config = {
                 messageSelector: platformSelectors.messageSelector || defaultSelectors.messageSelector,
                 buttonContainerSelector: platformSelectors.buttonContainerSelector || defaultSelectors.buttonContainerSelector,
-                copyButtonSelector: currentPlatform === 'chatgpt'
-                    ? mergeSelectors(platformSelectors.copyButtonSelector, defaultSelectors.copyButtonSelector)
-                    : (platformSelectors.copyButtonSelector || defaultSelectors.copyButtonSelector),
+                copyButtonSelector: platformSelectors.copyButtonSelector || defaultSelectors.copyButtonSelector,
                 fallbackCopyButtonSelector: platformSelectors.fallbackCopyButtonSelector || defaultSelectors.fallbackCopyButtonSelector,
                 contentSelector: platformSelectors.contentSelector || defaultSelectors.contentSelector,
                 getButtonContainer: defaultSelectors.getButtonContainer
@@ -410,7 +402,7 @@ function addMarkdownCopyButton(buttonContainer, directCopyButton = null) {
 
         if (markdownContent) {
             try {
-                const markdown = globalThis.MarkdownCopy.htmlToMarkdown(markdownContent);
+                const markdown = htmlToMarkdown(markdownContent);
                 logDebug(markdown);
 
                 try {
@@ -559,7 +551,7 @@ function exportConversation() {
 
             if (aiDiv) {
                 const content = aiDiv.querySelector('.markdown') || aiDiv;
-                markdown += `${chrome.i18n.getMessage('aiRole')}\n${globalThis.MarkdownCopy.htmlToMarkdown(content)}\n\n`;
+                markdown += `${chrome.i18n.getMessage('aiRole')}\n${htmlToMarkdown(content)}\n\n`;
             }
 
             if (userDiv || aiDiv) {
@@ -602,7 +594,7 @@ function exportConversation() {
             if (messageContent) {
                 const markdownEl = messageContent.querySelector('.markdown');
                 const content = markdownEl || messageContent;
-                markdown += `${chrome.i18n.getMessage('aiRole')}\n${globalThis.MarkdownCopy.htmlToMarkdown(content)}\n\n---\n\n`;
+                markdown += `${chrome.i18n.getMessage('aiRole')}\n${htmlToMarkdown(content)}\n\n---\n\n`;
             }
         });
     }

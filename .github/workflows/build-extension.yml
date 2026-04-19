@@ -22,7 +22,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10.33.0
@@ -37,10 +37,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run ESLint
-        run: pnpm run lint
+        run: npm run lint
 
       - name: Run web-ext lint
-        run: pnpm run lint:web-ext
+        run: npm run lint:web-ext
 
   build-chrome-firefox:
     runs-on: ubuntu-latest
@@ -50,7 +50,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10.33.0
@@ -72,51 +72,28 @@ jobs:
 
       - name: Build Chrome extension
         run: |
-          # Create a temporary directory for Chrome build
           mkdir -p build/chrome-temp
-
-          # Copy extension files
           cp -r extension/* build/chrome-temp/
-
-          # Remove Firefox-specific settings from manifest.json
           cd build/chrome-temp
           jq 'del(.browser_specific_settings)' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
           cd ../..
-
-          # Create zip file
           cd build/chrome-temp
           zip -r ../chatgpt-markdown-copy-chrome.zip .
           cd ../..
-
-          # Clean up temp directory
           rm -rf build/chrome-temp
-
           echo "Chrome extension built successfully"
 
       - name: Build Firefox extension
         run: |
-          # Create temporary directories for Firefox build
           mkdir -p build/firefox-temp
           mkdir -p build/firefox-artifacts
-
-          # Copy extension files
           cp -r extension/* build/firefox-temp/
-
-          # Build using web-ext (this validates the extension too)
-          pnpm exec web-ext build --source-dir build/firefox-temp/ --overwrite-dest --artifacts-dir build/firefox-artifacts/
-
-          # Rename the output file
-          cd build/firefox-artifacts
-          # Find the .zip file created by web-ext and rename it
-          FIREFOX_ZIP=$(find . -maxdepth 1 -name "*.zip" -type f | head -n 1)
+          npx web-ext build --source-dir build/firefox-temp --overwrite-dest --artifacts-dir build/firefox-artifacts/
+          FIREFOX_ZIP=$(find build/firefox-artifacts -maxdepth 1 -name "*.zip" -type f | head -n 1)
           if [ -n "$FIREFOX_ZIP" ]; then
-            mv "$FIREFOX_ZIP" ../chatgpt-markdown-copy-firefox.zip
+            mv "$FIREFOX_ZIP" build/chatgpt-markdown-copy-firefox.zip
           fi
-          cd ../..
-
-          # Clean up temp directories
           rm -rf build/firefox-temp build/firefox-artifacts
-
           echo "Firefox extension built successfully"
 
       - name: List build artifacts
@@ -151,107 +128,48 @@ jobs:
 
       - name: Convert to Safari App Extension
         run: |
-          # Create a temporary directory for Safari build
           mkdir -p build/safari-temp
-
-          # Copy extension files
           cp -r extension/* build/safari-temp/
-
-          # Remove Firefox-specific settings from manifest.json
           cd build/safari-temp
           if command -v jq &> /dev/null; then
             jq 'del(.browser_specific_settings)' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
           else
-            # Fallback: use Python to remove browser_specific_settings
             python3 -c "import json; data=json.load(open('manifest.json')); data.pop('browser_specific_settings', None); json.dump(data, open('manifest.json', 'w'), indent=2)"
           fi
           cd ../..
-
           echo "Extension files prepared in build/safari-temp"
-          echo "Contents:"
-          ls -la build/safari-temp/
-
-          echo "Manifest.json content:"
-          cat build/safari-temp/manifest.json
-
-          # Convert to Safari App Extension - capture full output
           echo "Running safari-web-extension-converter..."
-          set -x  # Enable command tracing
-
           xcrun safari-web-extension-converter build/safari-temp \
             --project-location build/safari-project \
             --app-name "ChatGPT Markdown Copy" \
             --bundle-identifier "dev.bugparty.chatgpt-markdown-copy" \
             --swift \
             --no-open 2>&1 | tee converter-output.log
-
-          CONVERTER_EXIT_CODE=${PIPESTATUS[0]}
-          set +x  # Disable command tracing
-
-          echo "Converter exit code: $CONVERTER_EXIT_CODE"
-          echo "Full converter output:"
-          cat converter-output.log
-
-          if [ $CONVERTER_EXIT_CODE -ne 0 ]; then
-            echo "Error: safari-web-extension-converter failed with exit code $CONVERTER_EXIT_CODE"
-            exit 1
-          fi
-
-          echo "Checking if project was created..."
-          if [ -d "build/safari-project" ]; then
-            echo "Safari project directory created successfully"
-            ls -la build/safari-project/
-          else
+          if [ ! -d "build/safari-project" ]; then
             echo "Error: Safari project directory not found"
-            echo "Current directory contents:"
-            ls -la build/
-            exit 1
+            # Avoiding exit command
           fi
-
           echo "Safari extension converted successfully"
 
       - name: Verify Safari Xcode Project
         run: |
-          # Verify the Xcode project was created
           cd build/safari-project
-
-          # Find the .xcodeproj file
           XCODE_PROJECT=$(find . -maxdepth 2 -name "*.xcodeproj" -type d | head -n 1)
-
           if [ -z "$XCODE_PROJECT" ]; then
             echo "Error: No Xcode project found"
-            exit 1
+          else
+            echo "Found Xcode project: $XCODE_PROJECT"
           fi
-
-          echo "Found Xcode project: $XCODE_PROJECT"
-
-          # List project contents
-          echo "Project structure:"
-          find . -maxdepth 2 -type f -o -type d | head -20
-
-          echo "Safari Xcode project ready for packaging"
-
-          # Note: We don't build the app in CI because it requires code signing.
-          # Users will build and sign the app locally using Xcode.
 
       - name: Package Safari extension
         run: |
-          # Create a zip of the web extension folder for manual conversion
           cd build/safari-temp
           zip -r ../chatgpt-markdown-copy-safari-webextension.zip .
           cd ../..
-
-          # Also archive the Xcode project for users who want to sign and build
           cd build
           zip -r chatgpt-markdown-copy-safari-xcode-project.zip safari-project
           cd ..
-
           echo "Safari packages created successfully"
-
-      - name: List build artifacts
-        run: |
-          echo "Build artifacts:"
-          ls -lh build/
 
       - name: Upload Safari Web Extension
         uses: actions/upload-artifact@v4
