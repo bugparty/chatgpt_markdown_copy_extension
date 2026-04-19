@@ -11,7 +11,7 @@ function htmlToMarkdown(element) {
     }
 
     function escapeTableCell(text) {
-        return text.replace(/\|/g, '\\|').replace(/\n+/g, ' ').trim();
+        return text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n+/g, ' ').trim();
     }
 
     function formatListItem(indent, marker, content) {
