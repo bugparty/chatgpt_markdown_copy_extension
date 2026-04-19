@@ -76,9 +76,7 @@ jobs:
           cp -r dist/* build/firefox-temp/
 
           # Build using web-ext (this validates the extension too)
-          cd build/firefox-temp
-          pnpm exec web-ext build --overwrite-dest --artifacts-dir ../firefox-artifacts/
-          cd ../..
+          pnpm exec web-ext build --source-dir build/firefox-temp/ --overwrite-dest --artifacts-dir build/firefox-artifacts/
 
           # Rename the output file
           cd build/firefox-artifacts

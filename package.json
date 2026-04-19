@@ -10,12 +10,14 @@
     "lint:fix": "eslint extension/**/*.js --fix",
     "lint:web-ext": "web-ext lint --source-dir=extension",
     "test": "node --test tests/*.test.js",
+    "test:e2e": "node --test e2e/*.test.js",
     "build": "tsup extension/content.js extension/background.js extension/options.js extension/popup.js extension/id.js --format iife --minify --sourcemap --outDir dist && cp extension/manifest.json dist/ && cp -r extension/icons dist/ && cp -r extension/_locales dist/ && cp extension/options.html dist/ && cp extension/options.css dist/ && cp extension/popup.html dist/ && cp extension/popup.css dist/ && cp extension/i18n.js dist/ && cp extension/selectors.js dist/ && cp extension/markdown.js dist/ && mv dist/content.global.js dist/content.js && mv dist/background.global.js dist/background.js && mv dist/options.global.js dist/options.js && mv dist/popup.global.js dist/popup.js && mv dist/id.global.js dist/id.js"
   },
   "devDependencies": {
     "eslint": "^8.56.0",
     "eslint-plugin-mozilla": "^3.6.3",
     "jsdom": "^29.0.2",
+    "playwright": "^1.59.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "web-ext": "^9.2.0"
