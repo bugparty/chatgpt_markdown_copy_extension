@@ -32,7 +32,6 @@
 ## Commit & Pull Request Guidelines
 - Follow existing history style: short, imperative, sentence-case summaries (e.g., `Add workflow to verify secrets have actual values`).
 - Keep commits scoped to one logical change.
-- **Pre-commit Lint Check**: Run `pnpm lint` and ensure it passes before making any git commit. Fix any lint errors (using `pnpm lint:fix` if needed) before committing.
 - PRs should include:
   - purpose and user-visible impact,
   - test evidence (`pnpm test`, plus `pnpm test:e2e` when relevant),
