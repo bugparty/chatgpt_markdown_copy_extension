@@ -11,7 +11,7 @@ const contentPath = path.join(__dirname, '../extension/content.js');
 const markdownPath = path.join(__dirname, '../extension/markdown.js');
 const selectorsPath = path.join(__dirname, '../extension/selectors.js');
 const i18nPath = path.join(__dirname, '../extension/i18n.js');
-const fixturePath = path.join(__dirname, '../../new-gemini-QA-UI.html');
+const fixturePath = path.join(__dirname, '../fixtures/gemini20260523.html');
 
 function loadContentScript(window) {
     const contentCode = fs.readFileSync(contentPath, 'utf8');
@@ -126,19 +126,18 @@ test('New Gemini Q&A UI: copyButtonSelector matches and addMarkdownCopyButton ex
 });
 
 test('Markdown parsing decodes math entities like &gt; into mathematical > operators', () => {
-    const html = fs.readFileSync(fixturePath, 'utf8');
-    const dom = new JSDOM(html, {
+    const dom = new JSDOM(`
+        <span class="math-inline" data-math="&gt;180^\\circ\\text{C}"></span>
+    `, {
         url: 'https://gemini.google.com/'
     });
 
     const window = dom.window;
     loadContentScript(window);
 
-    // Find the math element containing the >180 formula
     const mathSpan = window.document.querySelector('.math-inline[data-math*="180"]');
-    assert.ok(mathSpan, 'Should find the target math span in the new Gemini UI fixture');
+    assert.ok(mathSpan, 'Should find the target math span');
 
-    // Parse the span to Markdown
     const markdown = window.MarkdownCopy.htmlToMarkdown(mathSpan);
     assert.strictEqual(markdown, '$\\gt 180^\\circ\\text{C}$', 'Formula should be parsed with decoded mathematical \\gt operator');
 });
@@ -146,55 +145,52 @@ test('Markdown parsing decodes math entities like &gt; into mathematical > opera
 test('Markdown parsing formats Gemini step-by-step sequence elements beautifully even when wrapped in a paragraph', () => {
     const dom = new JSDOM(`
         <p data-path-to-node="10"></p>
+        <template id="sequence-template">
+            <sequence class="lm-enabled ng-star-inserted">
+                <div class="sequence-container">
+                    <div class="sequence-event">
+                        <div hide-from-message-actions="" class="sequence-event-marker-container hide-from-message-actions">
+                            <div class="sequence-event-marker">1</div>
+                        </div>
+                        <div class="sequence-event-content">
+                            <div hide-from-message-actions="" class="hide-from-message-actions">
+                                <div class="sequence-event-title">Dry Dusting</div>
+                                <div class="sequence-event-subtitle">Step 1: Eliminate the Abrasives</div>
+                            </div>
+                            <div class="sequence-event-description">
+                                <span only-show-to-message-actions="" class="only-show-to-message-actions" style="display: none;">
+                                    <strong>1. Dry Dusting:</strong>Step 1: Eliminate the Abrasives.
+                                </span>
+                                <p>Before introducing any liquids, wipe the entire tub down.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sequence-event">
+                        <div hide-from-message-actions="" class="sequence-event-marker-container hide-from-message-actions">
+                            <div class="sequence-event-marker">2</div>
+                        </div>
+                        <div class="sequence-event-content">
+                            <div hide-from-message-actions="" class="hide-from-message-actions">
+                                <div class="sequence-event-title">The Lipid Varnish Attack</div>
+                            </div>
+                            <div class="sequence-event-description">
+                                <span only-show-to-message-actions="" class="only-show-to-message-actions" style="display: none;">
+                                    <strong>2. The Lipid Varnish Attack:</strong>Step 2: 45-Minute Solvent Dwell.
+                                </span>
+                                <p>You must dissolve the oxidized, hardened layer of old body oils.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </sequence>
+        </template>
     `);
 
     const window = dom.window;
     const document = window.document;
-
-    const sequenceDom = new JSDOM(`
-        <sequence class="lm-enabled ng-star-inserted">
-            <div class="sequence-container">
-                <div class="sequence-event">
-                    <div hide-from-message-actions="" class="sequence-event-marker-container hide-from-message-actions">
-                        <div class="sequence-event-marker">1</div>
-                    </div>
-                    <div class="sequence-event-content">
-                        <div hide-from-message-actions="" class="hide-from-message-actions">
-                            <div class="sequence-event-title">Dry Dusting</div>
-                            <div class="sequence-event-subtitle">Step 1: Eliminate the Abrasives</div>
-                        </div>
-                        <div class="sequence-event-description">
-                            <span only-show-to-message-actions="" class="only-show-to-message-actions" style="display: none;">
-                                <strong>1. Dry Dusting:</strong>Step 1: Eliminate the Abrasives.
-                            </span>
-                            <p>Before introducing any liquids, wipe the entire tub down.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="sequence-event">
-                    <div hide-from-message-actions="" class="sequence-event-marker-container hide-from-message-actions">
-                        <div class="sequence-event-marker">2</div>
-                    </div>
-                    <div class="sequence-event-content">
-                        <div hide-from-message-actions="" class="hide-from-message-actions">
-                            <div class="sequence-event-title">The Lipid Varnish Attack</div>
-                        </div>
-                        <div class="sequence-event-description">
-                            <span only-show-to-message-actions="" class="only-show-to-message-actions" style="display: none;">
-                                <strong>2. The Lipid Varnish Attack:</strong>Step 2: 45-Minute Solvent Dwell.
-                            </span>
-                            <p>You must dissolve the oxidized, hardened layer of old body oils.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </sequence>
-    `);
-
-    // Nest the sequence element inside the paragraph programmatically to mirror live DOM
     const paragraphElement = document.querySelector('p[data-path-to-node]');
-    const sequenceNode = document.importNode(sequenceDom.window.document.querySelector('sequence'), true);
-    paragraphElement.appendChild(sequenceNode);
+    const sequenceTemplate = document.querySelector('#sequence-template');
+    paragraphElement.appendChild(sequenceTemplate.content.firstElementChild);
 
     loadContentScript(window);
 
@@ -214,4 +210,3 @@ test('Markdown parsing formats Gemini step-by-step sequence elements beautifully
 
     assert.strictEqual(markdown, expected);
 });
-

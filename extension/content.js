@@ -180,11 +180,12 @@ function addMarkdownCopyButton(buttonContainer, directCopyButton = null) {
         mdButton.setAttribute('data-markdown-copy', 'true');
         mdButton.setAttribute('title', chrome.i18n.getMessage('copyAsMarkdown'));
     } else if (currentPlatform === 'gemini') {
-        // Clone the whole <copy-button> wrapper for robust, clean Angular component reproduction
+        // Clone the whole <copy-button> wrapper to preserve Gemini's native button styling.
         mdWrapper = buttonContainer.cloneNode(true);
         mdWrapper.removeAttribute('id');
         mdWrapper.setAttribute('data-markdown-copy', 'true');
         mdWrapper.removeAttribute('data-md-id');
+
         // Remove duplicate attributes from cloned descendants.
         mdWrapper.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
         mdWrapper.querySelectorAll('[data-md-id]').forEach(el => el.removeAttribute('data-md-id'));
@@ -202,28 +203,6 @@ function addMarkdownCopyButton(buttonContainer, directCopyButton = null) {
             mdButton.setAttribute('aria-label', chrome.i18n.getMessage('copyAsMarkdown'));
             mdButton.setAttribute('title', chrome.i18n.getMessage('copyAsMarkdown'));
             mdButton.setAttribute('data-markdown-copy', 'true');
-            mdButton.removeAttribute('jslog');
-        }
-
-        // Remove all id and data-md-id attributes from cloned descendants to avoid duplicates
-        mdWrapper.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-        mdWrapper.querySelectorAll('[data-md-id]').forEach(el => el.removeAttribute('data-md-id'));
-
-
-        mdButton = mdWrapper.querySelector('button');
-        const matIcon = mdWrapper.querySelector('mat-icon');
-        const tooltipEl = mdWrapper.querySelector('[gemtooltip]');
-
-        if (tooltipEl) {
-            tooltipEl.setAttribute('gemtooltip', chrome.i18n.getMessage('copyAsMarkdown'));
-            tooltipEl.setAttribute('arialabel', chrome.i18n.getMessage('copyAsMarkdown'));
-        }
-
-        if (mdButton) {
-            mdButton.setAttribute('aria-label', chrome.i18n.getMessage('copyAsMarkdown'));
-            mdButton.setAttribute('title', chrome.i18n.getMessage('copyAsMarkdown'));
-            mdButton.setAttribute('data-markdown-copy', 'true');
-            // Remove Angular attributes that could conflict or trigger duplicate behavior
             mdButton.removeAttribute('jslog');
         }
 

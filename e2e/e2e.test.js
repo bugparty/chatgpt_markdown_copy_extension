@@ -111,7 +111,7 @@ test('E2E Test: Extension functions normally with fixtures', async (t) => {
     const copyButton = page
       .locator('response-container')
       .filter({ hasText: '是的，我近期迎来了一些重要的功能更新' })
-      .locator('[data-markdown-copy="true"]');
+      .locator('button[data-markdown-copy="true"]');
     await copyButton.waitFor({ state: 'attached', timeout: 5000 });
 
     const copyButtonClassName = await copyButton.evaluate(el => el.className);
