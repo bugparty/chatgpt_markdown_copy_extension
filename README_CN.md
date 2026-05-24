@@ -237,7 +237,31 @@ MIT License - 可自由修改和分发
 
 ## 贡献
 
-欢迎贡献！请随时提交 Pull Request。
+欢迎贡献！如果由于 ChatGPT/Gemini 的 UI 更新导致格式解析出错或复制按钮未显示，请遵循以下标准流程进行复现、测试和修复：
+
+### 🐛 标准 Bug 修复流程
+
+1. **捕获 HTML 结构 (Fixture)**：
+   - 打开浏览器中复现 Bug 的 ChatGPT/Gemini 聊天页面。
+   - 打开开发者工具（`F12`），定位到相关的对话消息容器节点，右键复制其完整的 HTML 源码（Outer HTML）。
+   - 在项目的 `fixtures/` 目录下新建一个 `.html` 文件（例如 `fixtures/gemini-bug-xyz.html`），并将 HTML 粘贴进去。
+2. **数据清洗与脱敏**：
+   - 清理该 HTML 文件：剔除无关的巨大 `<script>` 脚本块、`<style>` 样式块（除非对排版复现必不可少）。
+   - **【极其重要】**：务必剔除所有敏感和个人信息（例如用户头像、用户名、登录态 Token 或私密聊天文本）。
+3. **编写复现测试 (Test Case)**：
+   - 在 `tests/` 目录下新建一个对应的测试文件（例如 `tests/gemini-bug-xyz.test.js`）。
+   - 读取刚才建好的 fixture HTML 文件，用 `jsdom` 加载并运行解析逻辑 `htmlToMarkdown`，编写断言以复现该 Bug（验证当前代码在测试中会失败）。
+4. **修复与人工校验**：
+   - 编写修复逻辑，或者让 AI 智能体（Agent）根据报错修改 `extension/markdown.js` 中的解析代码或 `extension/content.js` 的选择器。
+   - 运行 `pnpm test` 确认新测试通过，且没有破坏现有的其他测试。
+   - 人工仔细检查生成的 Markdown 文本，确保格式复制完整且无遗漏。
+   - 确认无误后，通过 `pnpm lint` 检查即可提交！
+
+> [!TIP]
+> **善用 AI 编程助手（Agent）！**
+> 如果你正在使用 AI 编程助手（如 Cursor、Claude Code 或 Antigravity），你完全不需要手动完成这 4 个步骤。你只需复制好聊天界面的 HTML 源码，直接发送给 Agent 并输入：
+> *“请帮我按照项目中的标准 Bug 修复流程（1-4 步）修复这个 ChatGPT/Gemini 的排版 Bug。”*
+> Agent 会自动帮你抓取并脱敏 fixture、编写复现测试用例、编写修复逻辑、跑通整个测试套件，并为你准备好一切提交工作！
 
 ## 作者
 

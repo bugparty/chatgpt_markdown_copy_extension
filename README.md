@@ -236,7 +236,30 @@ MIT License - feel free to modify and distribute
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! If you encounter formatting bugs or integration issues due to ChatGPT/Gemini UI updates, please follow this standard workflow to reproduce, test, and fix the issue:
+
+### 🐛 Standard Bug-Fixing Workflow
+
+1. **Capture HTML Fixture**:
+   - Open the ChatGPT/Gemini chat tab in your browser where the bug occurs.
+   - Open Developer Tools (`F12`), locate the target conversation message container element, and copy its outer HTML.
+   - Create a new `.html` file inside the `fixtures/` directory (e.g., `fixtures/gemini-bug-xyz.html`).
+2. **Sanitize the HTML**:
+   - Clean up the copied HTML: remove massive inline `<script>` tags, `<style>` blocks (unless essential to layout replication), and **crucially**, strip out any sensitive/personal information (e.g., username, user avatar, session tokens, or private conversation content).
+3. **Write a Reproducing Test**:
+   - Create a new test case in the `tests/` directory (e.g., `tests/gemini-bug-xyz.test.js`).
+   - Load the new fixture, parse it using `htmlToMarkdown`, and assert correct markdown rendering. Verify the test fails on current code.
+4. **Implement the Fix & Validate**:
+   - Apply fixes to `extension/markdown.js` or `extension/content.js`.
+   - Run `pnpm test` to verify the fix passes and doesn't break other tests.
+   - Manually double-check the parsed markdown to ensure formatting is 100% complete and accurate.
+   - Once all checks pass, run `pnpm lint` and submit a Pull Request!
+
+> [!TIP]
+> **Leverage AI Coding Agents!**
+> If you are using an AI coding assistant (such as Cursor, Claude Code, or Antigravity), you don't have to do all of this manually. You can simply copy the HTML source code, paste it to the Agent, and prompt:
+> *"Please help me fix this ChatGPT/Gemini formatting bug following the standard bug-fixing workflow (steps 1-4) in our repository."*
+> The Agent will automatically capture/sanitize the fixture, write the reproducing test case, implement the fix, run all test suites, and prepare everything for commit!
 
 ## Author
 
