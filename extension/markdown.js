@@ -63,9 +63,9 @@ function htmlToMarkdown(element) {
         if (node.hasAttribute?.('only-show-to-message-actions') || node.classList?.contains('only-show-to-message-actions')) {
             const strongNode = node.querySelector('strong, b');
             if (strongNode) {
-                let titleText = normalizeInline(processNode(strongNode));
+                const titleText = normalizeInline(processNode(strongNode));
                 // Extract clean text inside strong tag, stripping asterisks and trailing colons
-                let cleanTitle = titleText.replace(/:?\*\*$/, '').replace(/^\*\*/, '').trim();
+                const cleanTitle = titleText.replace(/:?\*\*$/, '').replace(/^\*\*/, '').trim();
 
                 // Clone node and remove strongNode to extract subtitle text
                 const cloned = node.cloneNode(true);
@@ -73,8 +73,8 @@ function htmlToMarkdown(element) {
                 if (clonedStrong) {
                     clonedStrong.remove();
                 }
-                let subtitleText = normalizeInline(cloned.textContent).trim();
-                let cleanSubtitle = subtitleText.replace(/^\*+/, '').replace(/\*+$/, '').replace(/\.$/, '').trim();
+                const subtitleText = normalizeInline(cloned.textContent).trim();
+                const cleanSubtitle = subtitleText.replace(/^\*+/, '').replace(/\*+$/, '').replace(/\.$/, '').trim();
 
                 let markdown = '';
                 if (cleanTitle) {
