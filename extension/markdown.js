@@ -7,7 +7,22 @@ function htmlToMarkdown(element) {
     }
 
     function normalizeTex(text) {
-        return text.replace(/\s+/g, ' ').trim();
+        return text
+            .replace(/>/g, '\\gt ')
+            .replace(/</g, '\\lt ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function decodeHtmlEntities(text) {
+        if (!text) return '';
+        return text
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&nbsp;/g, ' ');
     }
 
     function escapeTableCell(text) {
@@ -39,6 +54,41 @@ function htmlToMarkdown(element) {
 
         if (node.nodeType !== Node.ELEMENT_NODE) {
             return '';
+        }
+
+        if (node.hasAttribute?.('hide-from-message-actions') || node.classList?.contains('hide-from-message-actions')) {
+            return '';
+        }
+
+        if (node.hasAttribute?.('only-show-to-message-actions') || node.classList?.contains('only-show-to-message-actions')) {
+            const strongNode = node.querySelector('strong, b');
+            if (strongNode) {
+                let titleText = normalizeInline(processNode(strongNode));
+                // Extract clean text inside strong tag, stripping asterisks and trailing colons
+                let cleanTitle = titleText.replace(/:?\*\*$/, '').replace(/^\*\*/, '').trim();
+
+                // Clone node and remove strongNode to extract subtitle text
+                const cloned = node.cloneNode(true);
+                const clonedStrong = cloned.querySelector('strong, b');
+                if (clonedStrong) {
+                    clonedStrong.remove();
+                }
+                let subtitleText = normalizeInline(cloned.textContent).trim();
+                let cleanSubtitle = subtitleText.replace(/^\*+/, '').replace(/\*+$/, '').replace(/\.$/, '').trim();
+
+                let markdown = '';
+                if (cleanTitle) {
+                    markdown += '**' + cleanTitle + '**  \n';
+                }
+                if (cleanSubtitle) {
+                    markdown += '*' + cleanSubtitle + '*';
+                }
+                return markdown + '\n\n';
+            }
+
+            const rawText = Array.from(node.childNodes).map(child => processNode(child, indent)).join('');
+            const text = rawText.replace(/(?<=[^\s*])\*\*(?=[a-zA-Z0-9])/g, '** ');
+            return normalizeInline(text) + '\n\n';
         }
 
         const tag = node.tagName.toLowerCase();
@@ -77,9 +127,15 @@ function htmlToMarkdown(element) {
             case 'h6':
                 result = '###### ' + normalizeInline(Array.from(node.childNodes).map(child => processNode(child, indent)).join('')) + '\n\n';
                 break;
-            case 'p':
-                result = normalizeInline(Array.from(node.childNodes).map(child => processNode(child, indent)).join('')) + '\n\n';
+            case 'p': {
+                const hasBlockChildren = node.querySelector('div, table, ul, ol, blockquote, pre, hr, h1, h2, h3, h4, h5, h6, sequence, structured-node-sequence, [only-show-to-message-actions], .only-show-to-message-actions') !== null;
+                if (hasBlockChildren) {
+                    result = Array.from(node.childNodes).map(child => processNode(child, indent)).join('') + '\n\n';
+                } else {
+                    result = normalizeInline(Array.from(node.childNodes).map(child => processNode(child, indent)).join('')) + '\n\n';
+                }
                 break;
+            }
             case 'strong':
             case 'b':
                 result = '**' + normalizeInline(Array.from(node.childNodes).map(child => processNode(child, indent)).join('')) + '**';
@@ -167,19 +223,21 @@ function htmlToMarkdown(element) {
                     if (mathAnnotation) {
                         const isDisplay = node.classList.contains('katex-display') ||
                             node.parentElement?.classList.contains('katex-display');
+                        const mathText = decodeHtmlEntities(mathAnnotation.textContent);
                         if (isDisplay) {
-                            result = '$$\n' + normalizeTex(mathAnnotation.textContent) + '\n$$\n\n';
+                            result = '$$\n' + normalizeTex(mathText) + '\n$$\n\n';
                         } else {
-                            result = '$' + normalizeTex(mathAnnotation.textContent) + '$';
+                            result = '$' + normalizeTex(mathText) + '$';
                         }
                     }
                 } else if (node.classList.contains('math-inline') || node.classList.contains('math-block')) {
                     const mathContent = node.getAttribute('data-math');
                     if (mathContent) {
+                        const mathText = decodeHtmlEntities(mathContent);
                         if (node.classList.contains('math-block')) {
-                            result = '$$\n' + normalizeTex(mathContent) + '\n$$\n\n';
+                            result = '$$\n' + normalizeTex(mathText) + '\n$$\n\n';
                         } else {
-                            result = '$' + normalizeTex(mathContent) + '$';
+                            result = '$' + normalizeTex(mathText) + '$';
                         }
                     }
                 } else if ((node.hasAttribute('data-state') && node.getAttribute('data-state') === 'closed') ||
@@ -214,7 +272,8 @@ function htmlToMarkdown(element) {
                 if (node.classList.contains('math-block')) {
                     const mathContent = node.getAttribute('data-math');
                     if (mathContent) {
-                        result = '$$\n' + normalizeTex(mathContent) + '\n$$\n\n';
+                        const mathText = decodeHtmlEntities(mathContent);
+                        result = '$$\n' + normalizeTex(mathText) + '\n$$\n\n';
                     }
                 } else {
                     result = Array.from(node.childNodes).map(child => processNode(child, indent)).join('');

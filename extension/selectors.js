@@ -24,7 +24,7 @@ globalThis.DEFAULT_PLATFORM_SELECTORS = {
     gemini: {
         messageSelector: 'message-content',
         buttonContainerSelector: 'copy-button',
-        copyButtonSelector: 'button[data-test-id="copy-button"], gem-icon-button[data-test-id="copy-button"]',
+        copyButtonSelector: '[data-test-id="copy-button"] button, button[data-test-id="copy-button"], button[aria-label="Copy"], button[aria-label="Copy response"],  gem-icon-button[data-test-id="copy-button"]',
         contentSelector: '.markdown'
     }
 };
