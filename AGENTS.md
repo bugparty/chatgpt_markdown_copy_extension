@@ -29,9 +29,17 @@
 - Name tests by behavior, e.g. `markdown-spacing.test.js`, and keep assertions deterministic.
 - Minimum expectation for changes: `pnpm test` passes; run `pnpm test:e2e` for UI/flow-impacting changes.
 
+## Bug Diagnosis & Reproduction Workflow
+When a user reports or you encounter a ChatGPT/Gemini formatting or parsing bug:
+1. **Capture HTML Fixture**: Open the corresponding chat interface in the browser, inspect the target conversation element, and copy the outer HTML. Save it as a new `.html` file under `fixtures/`.
+2. **Sanitize Fixture**: Clean up the HTML by removing massive `<script>` blocks, excessive inline `<style>` tags, and **crucially** strip out any sensitive/personal user data (avatars, login info, session tokens, private text).
+3. **Write Reproducing Test**: Create a new test case in `tests/` (e.g. `tests/bug-name.test.js`) that imports the new fixture, parses it using `htmlToMarkdown`, and asserts correct output. Verify that the test fails on current code.
+4. **Implement Fix & Verify**: Apply fixes to `extension/markdown.js` or `extension/content.js`. Run `pnpm test` to verify the fix passes and other tests do not regress. Manually double-check the copied markdown outputs for accuracy and completeness.
+
 ## Commit & Pull Request Guidelines
 - Follow existing history style: short, imperative, sentence-case summaries (e.g., `Add workflow to verify secrets have actual values`).
 - Keep commits scoped to one logical change.
+- **Pre-commit Lint Check**: Run `pnpm lint` and ensure it passes before making any git commit. Fix any lint errors (using `pnpm lint:fix` if needed) before committing.
 - PRs should include:
   - purpose and user-visible impact,
   - test evidence (`pnpm test`, plus `pnpm test:e2e` when relevant),

@@ -10,6 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const markdownPath = path.join(__dirname, '../extension/markdown.js');
 const chatgptFixturePath = path.join(__dirname, '../fixtures/chatgpt20260418.html');
 const geminiFixturePath = path.join(__dirname, '../fixtures/gemini20260418.html');
+const geminiProFixturePath = path.join(__dirname, '../fixtures/gemini20260523.html');
 const markdownCode = fs.readFileSync(markdownPath, 'utf8');
 
 function loadMarkdownHelpers(window) {
@@ -50,5 +51,15 @@ test('Gemini fixture markdown preserves formulas and tables', () => {
 
     assert.match(markdown, /\$\$\nV\^\{\\pi\}\(s\) = \\mathbb\{E\}_\{\\pi\}/, 'expected first display equation to be preserved');
     assert.match(markdown, /\| Feature \| V-Function \$V\(s\)\$ \| Q-Function \$Q\(s, a\)\$ \|/, 'expected comparison table to be converted to markdown');
+    assert.doesNotMatch(markdown, /导出到 Google 表格/, 'expected Gemini UI actions to be excluded from markdown output');
+});
+
+test('Gemini 20260523 fixture exports clean markdown content', () => {
+    const markdown = renderFixtureToMarkdown(geminiProFixturePath, '.markdown');
+
+    assert.ok(markdown.length > 200, 'expected substantial markdown output from gemini20260523 fixture');
+    assert.match(markdown, /是的，我近期迎来了一些重要的功能更新/, 'expected main answer content to be present');
+    assert.match(markdown, /### 1\. 更丰富的沉浸式交互/, 'expected section headings to be preserved');
+    assert.doesNotMatch(markdown, /<[^>]+>/, 'expected markdown output to not contain raw HTML tags');
     assert.doesNotMatch(markdown, /导出到 Google 表格/, 'expected Gemini UI actions to be excluded from markdown output');
 });

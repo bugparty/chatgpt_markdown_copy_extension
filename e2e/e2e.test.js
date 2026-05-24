@@ -56,7 +56,7 @@ test('E2E Test: Extension functions normally with fixtures', async (t) => {
 
     await page.goto('https://chatgpt.com/test');
 
-    const copyButton = page.locator('[data-markdown-copy="true"]');
+    const copyButton = page.locator('[data-markdown-copy="true"]').first();
     await copyButton.waitFor({ state: 'attached', timeout: 5000 });
     await copyButton.click();
     await page.waitForTimeout(500);
@@ -84,13 +84,45 @@ test('E2E Test: Extension functions normally with fixtures', async (t) => {
 
     await page.goto('https://gemini.google.com/test');
 
-    const copyButton = page.locator('[data-markdown-copy="true"]');
+    const copyButton = page.locator('[data-markdown-copy="true"]').first();
     await copyButton.waitFor({ state: 'attached', timeout: 5000 });
     await copyButton.click();
     await page.waitForTimeout(500);
 
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
     assert.strictEqual(clipboardText.trim(), expectedMd.trim(), "Gemini clipboard content should match expected output");
+    await page.close();
+  });
+
+  await t.test('Gemini 20260523 fixture parsing', async () => {
+    const geminiFixturePath = path.join(__dirname, '../fixtures/gemini20260523.html');
+    const geminiExpectedPath = path.join(__dirname, '../fixtures/gemini20260523.parsed.md');
+
+    const rawHtml = await fs.readFile(geminiFixturePath, 'utf8');
+    const expectedMd = await fs.readFile(geminiExpectedPath, 'utf8');
+
+    const page = await browser.newPage();
+    await page.route('https://gemini.google.com/test-20260523', async route => {
+      await route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: rawHtml });
+    });
+
+    await page.goto('https://gemini.google.com/test-20260523');
+
+    const copyButton = page
+      .locator('response-container')
+      .filter({ hasText: '是的，我近期迎来了一些重要的功能更新' })
+      .locator('button[data-markdown-copy="true"]');
+    await copyButton.waitFor({ state: 'attached', timeout: 5000 });
+
+    const copyButtonClassName = await copyButton.evaluate(el => el.className);
+    assert.match(copyButtonClassName, /mat-mdc-icon-button/, "Gemini 20260523 markdown copy button should use icon button styling");
+    assert.doesNotMatch(copyButtonClassName, /gem-button/, "Gemini 20260523 markdown copy button should not use the host gem-button styling");
+
+    await copyButton.click();
+    await page.waitForTimeout(500);
+
+    const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+    assert.strictEqual(clipboardText.trim(), expectedMd.trim(), "Gemini 20260523 clipboard content should match expected output");
     await page.close();
   });
 

@@ -94,19 +94,22 @@ function addMarkdownCopyButton(buttonContainer, directCopyButton = null) {
 
     // Check if processing or already processed
     if (processingQueue.has(containerId)) {
-        logError('[addMarkdownCopyButton] Skipping - already in processing queue:', containerId);
+        logDebug('[addMarkdownCopyButton] Skipping - already in processing queue:', containerId);
         return;
     }
 
     // Check if button already added
     if (buttonContainer.querySelector('[data-markdown-copy="true"]')) {
-        logError('[addMarkdownCopyButton] Skipping - markdown button already exists');
+        logDebug('[addMarkdownCopyButton] Skipping - markdown button already exists');
         return;
     }
 
     // For Gemini, additionally check if next sibling is our button
-    if (currentPlatform === 'gemini' && buttonContainer.nextElementSibling?.hasAttribute('data-markdown-copy')) {
-        logError('[addMarkdownCopyButton] Skipping - Gemini button already exists');
+    if (currentPlatform === 'gemini' && (
+        buttonContainer.nextElementSibling?.hasAttribute('data-markdown-copy') ||
+        buttonContainer.nextElementSibling?.querySelector('[data-markdown-copy]')
+    )) {
+        logDebug('[addMarkdownCopyButton] Skipping - Gemini button already exists');
         return;
     }
 
@@ -132,11 +135,12 @@ function addMarkdownCopyButton(buttonContainer, directCopyButton = null) {
     processingQueue.add(containerId);
     buttonContainer.setAttribute('data-md-id', containerId);
 
-    // Create new button
-    const mdButton = document.createElement('button');
+    let mdButton;
+    let mdWrapper;
 
     // Set button style based on platform
     if (currentPlatform === 'chatgpt') {
+        mdButton = document.createElement('button');
         mdButton.className = copyButton.className;
 
         // Create ChatGPT button content using DOM API
@@ -172,46 +176,88 @@ function addMarkdownCopyButton(buttonContainer, directCopyButton = null) {
         span.appendChild(svg);
         mdButton.appendChild(span);
 
+        mdButton.setAttribute('aria-label', chrome.i18n.getMessage('copyAsMarkdown'));
+        mdButton.setAttribute('data-markdown-copy', 'true');
+        mdButton.setAttribute('title', chrome.i18n.getMessage('copyAsMarkdown'));
     } else if (currentPlatform === 'gemini') {
-        mdButton.className = copyButton.className;
-        mdButton.setAttribute('mat-button', '');
-        mdButton.setAttribute('tabindex', '0');
+        // Clone the whole <copy-button> wrapper to preserve Gemini's native button styling.
+        mdWrapper = buttonContainer.cloneNode(true);
+        mdWrapper.removeAttribute('id');
+        mdWrapper.setAttribute('data-markdown-copy', 'true');
+        mdWrapper.removeAttribute('data-md-id');
 
-        const ripple = document.createElement('span');
-        ripple.className = 'mat-mdc-button-persistent-ripple mdc-button__ripple';
+        // Remove duplicate attributes from cloned descendants.
+        mdWrapper.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+        mdWrapper.querySelectorAll('[data-md-id]').forEach(el => el.removeAttribute('data-md-id'));
 
-        const matIcon = document.createElement('mat-icon');
-        matIcon.setAttribute('role', 'img');
-        matIcon.className = 'mat-icon notranslate embedded-copy-icon google-symbols mat-ligature-font mat-icon-no-color';
-        matIcon.setAttribute('aria-hidden', 'true');
-        matIcon.textContent = 'description';
+        mdButton = mdWrapper.querySelector('button');
+        const matIcon = mdWrapper.querySelector('mat-icon');
+        const tooltipEl = mdWrapper.querySelector('[gemtooltip]');
 
-        const label = document.createElement('span');
-        label.className = 'mdc-button__label';
+        if (tooltipEl) {
+            tooltipEl.setAttribute('gemtooltip', chrome.i18n.getMessage('copyAsMarkdown'));
+            tooltipEl.setAttribute('arialabel', chrome.i18n.getMessage('copyAsMarkdown'));
+        }
 
-        const focusIndicator = document.createElement('span');
-        focusIndicator.className = 'mat-focus-indicator';
+        if (mdButton) {
+            mdButton.setAttribute('aria-label', chrome.i18n.getMessage('copyAsMarkdown'));
+            mdButton.setAttribute('title', chrome.i18n.getMessage('copyAsMarkdown'));
+            mdButton.setAttribute('data-markdown-copy', 'true');
+            mdButton.removeAttribute('jslog');
+        }
 
-        const touchTarget = document.createElement('span');
-        touchTarget.className = 'mat-mdc-button-touch-target';
+        if (matIcon) {
+            // Replace the <mat-icon> with a beautiful custom inline SVG document icon
+            // to completely avoid any custom subset symbol font loading limitations
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '20');
+            svg.setAttribute('height', '20');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.setAttribute('stroke-width', '2');
+            svg.setAttribute('stroke-linecap', 'round');
+            svg.setAttribute('stroke-linejoin', 'round');
+            svg.setAttribute('class', 'mat-icon notranslate lm-icon-m');
+            svg.style.width = '20px';
+            svg.style.height = '20px';
 
-        const ripple2 = document.createElement('span');
-        ripple2.className = 'mat-ripple mat-mdc-button-ripple';
+            const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path1.setAttribute('d', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z');
 
-        mdButton.appendChild(ripple);
-        mdButton.appendChild(matIcon);
-        mdButton.appendChild(label);
-        mdButton.appendChild(focusIndicator);
-        mdButton.appendChild(touchTarget);
-        mdButton.appendChild(ripple2);
+            const polyline1 = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            polyline1.setAttribute('points', '14 2 14 8 20 8');
+
+            const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line1.setAttribute('x1', '16');
+            line1.setAttribute('y1', '13');
+            line1.setAttribute('x2', '8');
+            line1.setAttribute('y2', '13');
+
+            const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line2.setAttribute('x1', '16');
+            line2.setAttribute('y1', '17');
+            line2.setAttribute('x2', '8');
+            line2.setAttribute('y2', '17');
+
+            const polyline2 = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            polyline2.setAttribute('points', '10 9 9 9 8 9');
+
+            svg.appendChild(path1);
+            svg.appendChild(polyline1);
+            svg.appendChild(line1);
+            svg.appendChild(line2);
+            svg.appendChild(polyline2);
+
+            matIcon.replaceWith(svg);
+        }
     }
 
-    mdButton.setAttribute('aria-label', chrome.i18n.getMessage('copyAsMarkdown'));
-    mdButton.setAttribute('data-markdown-copy', 'true');
-    mdButton.setAttribute('title', chrome.i18n.getMessage('copyAsMarkdown'));
-
     // Add click event
-    mdButton.addEventListener('click', async () => {
+    mdButton.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
         logDebug('on click');
         let markdownContent;
         let markdownToCopy = '';
@@ -233,12 +279,17 @@ function addMarkdownCopyButton(buttonContainer, directCopyButton = null) {
                 }
             }
         } else if (currentPlatform === 'gemini') {
-            // Go up 4 levels then find previous sibling
-            const contentDiv = buttonContainer.parentElement?.parentElement?.parentElement?.parentElement?.previousElementSibling;
-            if (contentDiv) {
-                // Content might be directly in this div, or in message-content child
-                const messageContent = contentDiv.querySelector('message-content') || contentDiv;
-                markdownContent = messageContent.querySelector('.markdown');
+            const modelResponse = buttonContainer.closest('model-response');
+            if (modelResponse) {
+                const messageContent = modelResponse.querySelector('message-content') || modelResponse;
+                markdownContent = messageContent.querySelector('.markdown') || messageContent;
+            } else {
+                // Fallback to original climbing traversal if model-response is missing
+                const contentDiv = buttonContainer.parentElement?.parentElement?.parentElement?.parentElement?.previousElementSibling;
+                if (contentDiv) {
+                    const messageContent = contentDiv.querySelector('message-content') || contentDiv;
+                    markdownContent = messageContent.querySelector('.markdown') || messageContent;
+                }
             }
         }
 
@@ -265,13 +316,37 @@ function addMarkdownCopyButton(buttonContainer, directCopyButton = null) {
                             svg.replaceWith(originalSVG);
                         }, 1000);
                     } else if (currentPlatform === 'gemini') {
-                        const matIcon = mdButton.querySelector('mat-icon');
-                        const originalText = matIcon.textContent;
-                        matIcon.textContent = 'check';
+                        const svg = mdButton.querySelector('svg');
+                        if (svg) {
+                            const originalHTML = svg.innerHTML;
+                            svg.innerHTML = '';
+                            const checkPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                            checkPath.setAttribute('d', 'M20 6L9 17l-5-5');
+                            checkPath.setAttribute('stroke', 'currentColor');
+                            checkPath.setAttribute('stroke-width', '2');
+                            checkPath.setAttribute('stroke-linecap', 'round');
+                            checkPath.setAttribute('stroke-linejoin', 'round');
+                            checkPath.setAttribute('fill', 'none');
+                            svg.appendChild(checkPath);
 
-                        setTimeout(() => {
-                            matIcon.textContent = originalText;
-                        }, 1000);
+                            setTimeout(() => {
+                                svg.innerHTML = originalHTML;
+                            }, 1000);
+                        } else {
+                            const iconToChange = mdButton.querySelector('mat-icon') || mdButton;
+                            const originalText = iconToChange.textContent;
+                            iconToChange.textContent = 'check';
+                            if (iconToChange.hasAttribute('fonticon')) {
+                                iconToChange.setAttribute('fonticon', 'check');
+                            }
+
+                            setTimeout(() => {
+                                iconToChange.textContent = originalText;
+                                if (iconToChange.hasAttribute('fonticon')) {
+                                    iconToChange.setAttribute('fonticon', 'description');
+                                }
+                            }, 1000);
+                        }
                     }
                 } catch (err) {
                     logError('Failed to copy to clipboard:', err);
@@ -289,7 +364,7 @@ function addMarkdownCopyButton(buttonContainer, directCopyButton = null) {
     if (currentPlatform === 'chatgpt') {
         copyButton.parentNode.insertBefore(mdButton, copyButton.nextSibling);
     } else if (currentPlatform === 'gemini') {
-        buttonContainer.parentNode.insertBefore(mdButton, buttonContainer.nextSibling);
+        buttonContainer.parentNode.insertBefore(mdWrapper, buttonContainer.nextSibling);
     }
 
     // Remove from queue after processing
