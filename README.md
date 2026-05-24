@@ -265,6 +265,10 @@ Contributions are welcome! If you encounter formatting bugs or integration issue
 
 bugparty
 
+## Contributors
+
+- [@igeorges1](https://github.com/igeorges1)
+
 ## Version History
 
 - **2.0.0** - Browser extension version

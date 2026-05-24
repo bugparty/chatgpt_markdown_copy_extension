@@ -267,6 +267,10 @@ MIT License - 可自由修改和分发
 
 bugparty
 
+## 贡献者
+
+- [@igeorges1](https://github.com/igeorges1)
+
 ## 版本历史
 
 - **2.0.0** - 浏览器扩展版本
