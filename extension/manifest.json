@@ -4,12 +4,12 @@
   "name": "__MSG_appName__",
   "version": "2.1.3",
   "description": "__MSG_appDescription__",
-  "author": "bugparty",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
+  "author": "bugparty",
   "permissions": [
     "clipboardWrite",
     "storage"
@@ -20,9 +20,6 @@
   },
   "host_permissions": [],
   "background": {
-    "scripts": [
-      "background.js"
-    ],
     "service_worker": "background.js"
   },
   "web_accessible_resources": [
